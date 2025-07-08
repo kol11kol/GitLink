@@ -3,7 +3,7 @@ httpModule.__index = httpModule
 local http = game:GetService("HttpService")
 export type encoding = (data : string) -> string
 function httpModule.EncodeBase64(data)
-	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'             
 	return ((data:gsub('.', function(x)
 		local r, b = '', x:byte()
 		for i = 8, 1, -1 do
@@ -12,9 +12,9 @@ function httpModule.EncodeBase64(data)
 		return r;
 	end) .. '0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
 		if (#x < 6) then 
-			return '' 
-		end
-		local c = 0
+			return ''               															
+		end																		-- https://devforum.roblox.com/t/base64-encoding-and-decoding-in-lua/1719860
+		local c = 0																				
 		for i = 1, 6 do 
 			c = c + (x:sub(i, i) == '1' and 2 ^ (6 - i) or 0) 
 		end
