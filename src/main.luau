@@ -82,11 +82,15 @@ function getAllFiles()
 			if typeof(value) == "table" then
 				if value.type == "blob" then
 					if #remoteRepo.files == 0 then
-						table.insert(remoteRepo.files, value)
-					elseif #remoteRepo.files > 0 then
-						if not table.find(remoteRepo.files, value, 1) then
+						if not (httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name == "README.md") then
 							table.insert(remoteRepo.files, value)
-						end
+						end	
+					elseif #remoteRepo.files > 0 then
+						if not (httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name == "README.md") then
+							if not table.find(remoteRepo.files, value, 1) then
+								table.insert(remoteRepo.files, value)
+							end
+						end	
 					end
 				end
 				deep_search(value)
@@ -447,8 +451,7 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 			]]
 			for _, file in pairs(remoteRepo.files) do
 				if not table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-					print(file.path)
-					--(string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1].." [Remote]")
+					http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = pageModule.currentPages.repository.commitUI.commitDesc.Text, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path)})
 				else 
 					local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
 					local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
@@ -480,6 +483,10 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 		end
 		pageModule.currentPages.repository.commitUI.Visible = false
 		pageModule.currentPages.repository.commitUI.Interactable = false
+		if filesStatus == true then
+			local succes, err = pcall(getAllFiles)
+			filesStatus = succes
+		end
 	else
 		print("Commit message is required for this action! Please enter commit name.")
 	end	
