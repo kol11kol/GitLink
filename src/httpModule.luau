@@ -90,7 +90,6 @@ export type delete = (self : {
 	Url : string, 
 	username : string, 
 	token : string,
-	fileContent : string,
 	Message : string,
 	Branch : string,
 	SHA : string,
