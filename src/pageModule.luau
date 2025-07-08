@@ -1,4 +1,18 @@
 local pMod = {}
+function pMod.loadingAnimation(main, mT)
+	local t = 0
+	repeat
+		t = t + 1
+		main.Title = "Gitlink Thinking."
+		task.wait(0.5)
+		main.Title = "Gitlink Thinking.."
+		task.wait(0.5)
+		main.Title = "Gitlink Thinking..."
+	until t == mT
+	if t == mT then
+		main.Title = "Gitlink"
+	end
+end
 function pMod.changePage(targetPage: string, main)
 	local page = pMod.currentPages[targetPage]
 	if page then
