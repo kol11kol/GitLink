@@ -192,6 +192,8 @@ button.Click:Connect(function()
 								createRepositoryUI(repo.name)
 							end
 						end
+					elseif not (id == game.PlaceId) then
+						login()
 					end
 				end
 			elseif #ids == 0 then
