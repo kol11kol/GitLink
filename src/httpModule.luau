@@ -98,12 +98,12 @@ export type delete = (self : {
 function httpModule.DELETE(self) : delete
 	return http:RequestAsync({
 		Method = "DELETE",
-		Url = self.Url .. "/contents" .. self.path .. "?ref=" .. self.Branch,
+		Url = self.Url .. self.path,
 		Headers = {
 			["accept"] = "application/vnd.github+json",
 			["Authorization"] = "Basic " .. httpModule.EncodeBase64(self.username .. ":" .. self.token)
 		},
-		http:JSONEncode({
+		Body = http:JSONEncode({
 			message = self.message,
 			sha = self.SHA
 		})
