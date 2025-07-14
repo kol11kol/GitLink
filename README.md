@@ -3,4 +3,5 @@ GitLink is a Roblox Studio plugin which allows developers to use Github for thei
 TODO:
 •Merge loginPageModule and creatorModule with main.
 •Add types to all scripts.
-Encoding for saved data.
+•Encoding for saved data.
+•Support for multiple files sharing the same name.
