@@ -219,7 +219,9 @@ pageModule.currentPages.login.select.MouseButton1Down:Connect(function()
 		end
 	end
 end)
+local currentEditedRepository: string
 pageModule.currentPages.login.edit.MouseButton1Down:Connect(function()
+	currentEditedRepository = pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text
 	if len(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text]) > 0 then
 		currentPage = pageModule.changePage("editPage", main)
 		currentPage.TextLabel.Text = ("Edit: "..pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text)
@@ -264,6 +266,7 @@ pageModule.currentPages.editPage.autoLoginButton.MouseButton1Down:Connect(functi
 	end
 end)
 pageModule.currentPages.editPage.finish.MouseButton1Down:Connect(function()
+	currentEditedRepository = ""
 	local page = pageModule.currentPages.editPage
 	local request = dataMod.updateRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
 	page.url.Text = ""
@@ -423,6 +426,7 @@ pageModule.currentPages.creatorPage.exit.MouseButton1Down:Connect(function()
 	currentPage = pageModule.changePage("login", main)
 end)
 pageModule.currentPages.editPage.exit.MouseButton1Down:Connect(function()
+	currentEditedRepository = ""
 	pageModule.currentPages.editPage.url.Text = ""
 	pageModule.currentPages.editPage.key.Text = ""
 	pageModule.currentPages.editPage.name.Text = ""
@@ -495,6 +499,77 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 	else
 		print("Commit message is required for this action! Please enter commit name.")
 	end	
+end)
+pageModule.currentPages.repository.fetch.MouseButton1Down:Connect(function()
+	pageModule.currentPages.repository.fetchUI.Visible = true
+	pageModule.currentPages.repository.fetchUI.Interactable = true
+	pageModule.currentPages.repository.fetchUI.title.Text = ("Change " .. #remoteRepo.files + #localRepo.scriptDocuments .. " files")
+	pageModule.currentPages.repository.fetchUI.changes.Text = ("By clicking continue " .. (#remoteRepo.files + #localRepo.scriptDocuments) - #local_remote_Files .. " local or remote files will be delated.")
+end)
+pageModule.currentPages.repository.fetchUI.exit.MouseButton1Down:Connect(function()
+	pageModule.currentPages.repository.fetchUI.Visible = false
+	pageModule.currentPages.repository.fetchUI.Interactable = false
+end)
+pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(function()
+	if filesStatus == true then
+		local succes, err = pcall(getAllFiles)
+		filesStatus = succes
+	end
+	for _, file in pairs(remoteRepo.files) do
+		if table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
+			local request = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+			print(http.DecodeBase64(httpService:JSONDecode(request.Body).content))
+			if request.Success == false then
+				print(request.StatusCode .. " " .. request.StatusMessage)
+			end
+		else
+			print("else")
+		end
+		--	local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+		--	local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+		--	if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
+		--		local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+		--		if request.Success == true then
+		--			print("Successfully pushed chages to: " .. localFile.Name)
+		--		else
+		--			warn("Code: " .. request.StatusCode .. request.StatusMessage)
+		--		end
+		--	end
+		--end
+	end
+end)
+local delateStatus = false
+pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
+	if delateStatus == false then
+		delateStatus = true
+		pageModule.currentPages.editPage.delate.TextColor3 = Color3.new(1, 0.0561074, 0)
+		task.wait(2)
+		delateStatus = false
+		pageModule.currentPages.editPage.delate.TextColor3 = Color3.new(0.998779, 1, 0.979385)
+	end
+	if delateStatus == true then
+		dataMod.removeRepositoryData(plugin, currentEditedRepository)
+		if dataMod.getData(plugin, "DEFAULTREPOSITORIES")[currentEditedRepository] then
+			dataMod.removeDefaultRepository(plugin, currentEditedRepository)
+		end
+		currentEditedRepository = ""
+		repositories = dataMod.getData(plugin, "REPOSITORIES")
+		if repositories then
+			if len(repositories) > 0 then
+				for _, button in pairs(pageModule.currentPages.login:WaitForChild("Frame"):GetChildren()) do
+					if button:IsA("TextButton") and not (button.Name == "add") then
+						button:Destroy()
+					end
+				end
+				for name, repo in pairs(repositories) do
+					local button = script.uiElements.button:Clone()
+					button.Parent = pageModule.currentPages.login.Frame
+					button.Text = name
+				end
+			end
+		end
+		pageModule.changePage("login", main)
+	end
 end)
 pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 	for _, button in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
