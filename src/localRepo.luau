@@ -36,13 +36,6 @@ function localRepoModule:getAllAviableScriptDocuments()
 		end
 	end
 end
-function localRepoModule:addFile(file, reomoteFiles)
-	if not table.find(reomoteFiles, file, 1) then
-		if not table.find(self.scriptDocuments, file, 1) then
-			table.insert(self.scriptDocuments, file)
-		end
-	end	
-end
 function localRepoModule:setAttribute(file, path)
 	if not file:GetAttribute("path") then
 		file:SetAttribute("path", path)
