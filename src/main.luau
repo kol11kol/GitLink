@@ -185,16 +185,14 @@ button.Click:Connect(function()
 				end
 			end
 			if #ids > 0 then
-				for _, id in pairs(ids) do
-					if id == game.PlaceId then
-						for _ , repo in pairs(dataMod.getData(plugin, "DEFAULTREPOSITORIES")) do
-							if repo.place == game.PlaceId then
-								createRepositoryUI(repo.name)
-							end
+				if table.find(ids, game.PlaceId, 1) then
+					for _ , repo in pairs(dataMod.getData(plugin, "DEFAULTREPOSITORIES")) do
+						if repo.place == game.PlaceId then
+							createRepositoryUI(repo.name)
 						end
-					elseif not (id == game.PlaceId) then
-						login()
 					end
+				else
+					login()
 				end
 			elseif #ids == 0 then
 				login()
@@ -568,7 +566,7 @@ pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 				end
 			end
 		end
-		pageModule.changePage("login", main)
+		currentPage = pageModule.changePage("login", main)
 	end
 end)
 pageModule.currentPages.repository.list.MouseEnter:Connect(function()
