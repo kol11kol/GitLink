@@ -56,7 +56,7 @@ function getAllFiles()
 		end
 		if #localRepo.scriptDocuments > 0 then
 			for _, file in pairs(localRepo.scriptDocuments) do
-				if not table.find(local_remote_Files, file, 1) then
+				if not table.find(local_remote_Files, file.Name, 1) and not remoteRepo.files[file.Name] then
 					local clone = script.uiElements.file:Clone()
 					clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
 					clone.Text = (file.Name.." [Local]")
@@ -336,8 +336,14 @@ pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Conn
 		print("No instances selected! - GitLink")
 	end
 	if #addFiles > 0 then
-		for _, file in pairs(addFiles) do
-			localRepo:addFile(file, remoteRepo.files)
+		for _, remoteFile in pairs(remoteRepo.files) do
+			for _, file in pairs(addFiles) do
+				if not (file.Name == string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. remoteFile.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]) then
+					if not table.find(local_remote_Files, file, 1) and not table.find(localRepo.scriptDocuments, file, 1) then
+						table.insert(localRepo.scriptDocuments, file)
+					end
+				end
+			end
 		end
 		table.clear(addFiles)
 		if filesStatus == true then
