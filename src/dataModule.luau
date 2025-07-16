@@ -136,6 +136,29 @@ function dataModule.removeDefaultRepository(p, repositoryName)
 		end
 	end
 end
+function dataModule.removeRepositoryData(p, repositoryName)
+	local function len(tab)
+		local sum = 0
+		for _, v in pairs(tab) do
+			sum = sum + 1
+		end
+		return sum
+	end
+	local repositories = {}
+	if dataModule.getData(p, "REPOSITORIES") then
+		if len(dataModule.getData(p, "REPOSITORIES")) > 0 then
+			repositories = dataModule.getData(p, "REPOSITORIES")
+			if len(repositories[repositoryName]) > 0 then
+				for name, data in pairs(repositories) do
+					if name == repositoryName then
+						repositories[repositoryName] = nil
+					end
+				end
+				dataModule.newData(p, "REPOSITORIES", repositories)
+			end
+		end
+	end
+end
 return dataModule
 --[[
 
