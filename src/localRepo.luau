@@ -17,7 +17,7 @@ function localRepoModule.newLocalRepo()
 	})
 	return self
 end
-function localRepoModule:getAllAviableScriptDocuments()
+function localRepoModule:getAllAviableScriptDocuments(name)
 	for _, object in ipairs(game:GetDescendants()) do
 		if object:IsA("Script") or object:IsA("LocalScript") or object:IsA("ModuleScript") then
 			if not object:IsA("CoreScript") then
@@ -27,7 +27,7 @@ function localRepoModule:getAllAviableScriptDocuments()
 				if not table.find(self.allFiles, object, 1) then
 					table.insert(self.allFiles, object)
 				end	
-				if object:GetAttribute("path") == true then
+				if object:GetAttribute("path") and string.find(object:GetAttribute("path"), name, 1, false) then
 					if not table.find(self.scriptDocuments, object, 1) then
 						table.insert(self.scriptDocuments, object)
 					end
@@ -36,9 +36,9 @@ function localRepoModule:getAllAviableScriptDocuments()
 		end
 	end
 end
-function localRepoModule:setAttribute(file, path)
+function localRepoModule:setAttribute(file, path, repositoryName)
 	if not file:GetAttribute("path") then
-		file:SetAttribute("path", path)
+		file:SetAttribute("path", path .. repositoryName)
 	end	
 end
 return localRepoModule
