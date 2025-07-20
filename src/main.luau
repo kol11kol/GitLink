@@ -77,7 +77,6 @@ function getAllFiles()
 	end
 	table.clear(remoteRepo.files)
 	table.clear(local_remote_Files)
-	table.clear(localRepo.scriptDocuments)
 	local function deep_search(tbl)
 		for key, value in pairs(tbl) do
 			if typeof(value) == "table" then
@@ -318,18 +317,17 @@ pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
 		end
 	end	
 end)
-local addFiles = {}
 pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Connect(function()
 	pageModule.loadingAnimation(main, 2)
 	if #game:GetService("Selection"):Get() > 0 then
 		for _, item in pairs(game:GetService("Selection"):Get()) do
 			if item:IsA("LuaSourceContainer") then
-				if #addFiles > 0 then
-					if not table.find(addFiles, item, 1) then
-						table.insert(addFiles, item)
+				if #local_remote_Files > 0 then
+					if not table.find(local_remote_Files, item.Name, 1) then
+						table.insert(localRepo.scriptDocuments, item)
 					end
-				else
-					table.insert(addFiles, item)
+				elseif #localRepo.scriptDocuments == 0 then
+					table.insert(localRepo.scriptDocuments, item)
 				end
 			elseif not item:IsA("LuaSourceContainer") then
 				print(item.Name.." is not a script! - GitLink")
@@ -338,21 +336,9 @@ pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Conn
 	else
 		print("No instances selected! - GitLink")
 	end
-	if #addFiles > 0 then
-		for _, remoteFile in pairs(remoteRepo.files) do
-			for _, file in pairs(addFiles) do
-				if not (file.Name == string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. remoteFile.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]) then
-					if not table.find(local_remote_Files, file.Name, 1) and not table.find(localRepo.scriptDocuments, file, 1) then
-						table.insert(localRepo.scriptDocuments, file)
-					end
-				end
-			end
-		end
-		table.clear(addFiles)
-		if filesStatus == true then
-			local succes, err = pcall(getAllFiles)
-			filesStatus = succes
-		end
+	if filesStatus == true then
+		local succes, err = pcall(getAllFiles)
+		filesStatus = succes
 	end
 end)
 pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function()
@@ -544,7 +530,8 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 					if file.Success == true then
 						local localFile = Instance.new("Script", game.ServerScriptService)
 						localFile.Source = http.DecodeBase64(httpService:JSONDecode(file.Body).content)
-						localFile.Name = httpService:JSONDecode(file.Body).name
+						localFile.Name = string.split(httpService:JSONDecode(file.Body).name, ".")[1]
+						localRepo:setAttribute(localFile, httpService:JSONDecode(file.Body).path, remoteRepo.name)
 					end
 				end	
 			end
