@@ -77,6 +77,9 @@ function getAllFiles()
 	end
 	table.clear(remoteRepo.files)
 	table.clear(local_remote_Files)
+	table.clear(localRepo.scriptDocuments)
+	table.clear(localRepo.allFiles)
+	table.clear(localRepo.allScriptDocuments)
 	local function deep_search(tbl)
 		for key, value in pairs(tbl) do
 			if typeof(value) == "table" then
@@ -99,14 +102,14 @@ function getAllFiles()
 	end
 	local files : http.get = http.GET({Url = remoteRepo.url, path = ("/git/trees/" .. remoteRepo.branchToUse .. "?recursive=1"), token = remoteRepo.token, username = remoteRepo.user}).Body
 	deep_search(httpService:JSONDecode(files))
-	localRepo:getAllAviableScriptDocuments()
+	localRepo:getAllAviableScriptDocuments(remoteRepo.name)
 	pageModule.loadingAnimation(main, 3)
 	for _, file in pairs(remoteRepo.files) do
 		local fileName = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
 		if table.find(localRepo.allScriptDocuments, fileName) then
 			table.insert(local_remote_Files, fileName)
 			if localRepo.allFiles[fileName] then
-				localRepo:setAttribute(localRepo.allFiles[fileName], file.path)
+				localRepo:setAttribute(localRepo.allFiles[fileName], file.path, remoteRepo.name)
 			end
 		end
 	end
@@ -339,7 +342,7 @@ pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Conn
 		for _, remoteFile in pairs(remoteRepo.files) do
 			for _, file in pairs(addFiles) do
 				if not (file.Name == string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. remoteFile.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]) then
-					if not table.find(local_remote_Files, file, 1) and not table.find(localRepo.scriptDocuments, file, 1) then
+					if not table.find(local_remote_Files, file.Name, 1) and not table.find(localRepo.scriptDocuments, file, 1) then
 						table.insert(localRepo.scriptDocuments, file)
 					end
 				end
@@ -451,64 +454,65 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 			local succes, err = pcall(getAllFiles)
 			filesStatus = succes
 		end
-		if #remoteRepo.files > 0 then
-			--[[
-			
-			
-					TODO: Optimaze API usage.
-			
-			
-			]]
-			for _, file in pairs(remoteRepo.files) do
-				if not table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-					local request = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = pageModule.currentPages.repository.commitUI.commitDesc.Text, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
-					if request.Success == false then
-						print(request.StatusCode .. " " .. request.StatusMessage)
-					end
-				else 
-					local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-					local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
-					if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
-						local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+		if filesStatus == true then
+			if #remoteRepo.files > 0 then
+				for _, file in pairs(remoteRepo.files) do
+					if not table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
+						local request = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = pageModule.currentPages.repository.commitUI.commitDesc.Text, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
 						if request.Success == true then
-							print("Successfully pushed chages to: " .. localFile.Name)
+							print("Delated a file in repository")
 						else
 							warn("Code: " .. request.StatusCode .. request.StatusMessage)
 						end
-					end
-				end	
+					else 
+						local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+						local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
+							local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+							if request.Success == true then
+								print("Successfully pushed chages to: " .. localFile.Name)
+							else
+								warn("Code: " .. request.StatusCode .. request.StatusMessage)
+							end
+						end
+					end	
+				end
 			end
-		end
-		if #localRepo.scriptDocuments > 0 then
-			for _, file in pairs(localRepo.scriptDocuments) do
-				if not table.find(local_remote_Files, file, 1) then
-					if remoteRepo.branchToUse == "" and #remoteRepo.branches == 0 and #remoteRepo.files == 0 then
-						remoteRepo.branchToUse = "main"
-					end
-					local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = "", Url = remoteRepo.url, fileContent = file.Source, path = ("/contents/" .. "src/" .. file.Name .. ".luau" .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-					if request.Success == true then
-						print("Successfully pushed chages to: " .. file.Name)
-					else
-						warn("Code: " .. request.StatusCode .. request.StatusMessage)
-					end
-				end	
+			if #localRepo.scriptDocuments > 0 then
+				for _, file in pairs(localRepo.scriptDocuments) do
+					if not table.find(local_remote_Files, file.Name, 1) then
+						if remoteRepo.branchToUse == "" and #remoteRepo.branches == 0 and #remoteRepo.files == 0 then
+							remoteRepo.branchToUse = "main"
+						end
+						local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = "", Url = remoteRepo.url, fileContent = file.Source, path = ("/contents/" .. "src/" .. file.Name .. ".luau" .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+						if request.Success == true then
+							print("Successfully pushed chages to: " .. file.Name)
+						else
+							warn("Code: " .. request.StatusCode .. request.StatusMessage)
+						end
+					end	
+				end
 			end
-		end
-		pageModule.currentPages.repository.commitUI.Visible = false
-		pageModule.currentPages.repository.commitUI.Interactable = false
-		if filesStatus == true then
-			local succes, err = pcall(getAllFiles)
-			filesStatus = succes
-		end
-	else
-		print("Commit message is required for this action! Please enter commit name.")
+			pageModule.currentPages.repository.commitUI.Visible = false
+			pageModule.currentPages.repository.commitUI.Interactable = false
+			if filesStatus == true then
+				local succes, err = pcall(getAllFiles)
+				filesStatus = succes
+			end
+		else
+			print("Commit message is required for this action! Please enter commit name.")
+		end	
 	end	
 end)
 pageModule.currentPages.repository.fetch.MouseButton1Down:Connect(function()
 	pageModule.currentPages.repository.fetchUI.Visible = true
 	pageModule.currentPages.repository.fetchUI.Interactable = true
 	pageModule.currentPages.repository.fetchUI.title.Text = ("Change " .. #remoteRepo.files + #localRepo.scriptDocuments .. " files")
-	pageModule.currentPages.repository.fetchUI.changes.Text = ("By clicking continue " .. (#remoteRepo.files + #localRepo.scriptDocuments) - #local_remote_Files .. " local or remote files will be delated.")
+	if #localRepo.scriptDocuments - #remoteRepo.files > 0 then
+		pageModule.currentPages.repository.fetchUI.changes.Text = ("By clicking continue " .. #localRepo.scriptDocuments - #remoteRepo.files .. " local file(s) will be delated.")
+	else
+		pageModule.currentPages.repository.fetchUI.changes.Text = ("By clicking continue no local file(s) will be delated.")
+	end	
 end)
 pageModule.currentPages.repository.fetchUI.exit.MouseButton1Down:Connect(function()
 	pageModule.currentPages.repository.fetchUI.Visible = false
@@ -519,27 +523,42 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 		local succes, err = pcall(getAllFiles)
 		filesStatus = succes
 	end
-	for _, file in pairs(remoteRepo.files) do
-		if table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-			local request = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-			print(http.DecodeBase64(httpService:JSONDecode(request.Body).content))
-			if request.Success == false then
-				print(request.StatusCode .. " " .. request.StatusMessage)
+	if filesStatus == true then
+		if #remoteRepo.files > 0 then
+			for _, file in pairs(remoteRepo.files) do
+				if table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
+					local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+					local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+					if fileContent.Success == true then
+						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
+							localFile.Source = http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content)
+							print("Successfully updated: " .. localFile.Name)
+						end
+					else
+						warn("Code: " .. fileContent.StatusCode .. fileContent.StatusMessage)
+					end
+				else
+					local file = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+					if file.Success == true then
+						local localFile = Instance.new("Script", game.ServerScriptService)
+						localFile.Source = http.DecodeBase64(httpService:JSONDecode(file.Body).content)
+						localFile.Name = httpService:JSONDecode(file.Body).name
+					end
+				end	
 			end
-		else
-			print("else")
+			for _, file in pairs(localRepo.scriptDocuments) do
+				if not table.find(local_remote_Files, file.Name, 1) then
+					print("Successfully delated " .. file.Name)
+					file.Parent = nil
+				end
+			end
+			pageModule.currentPages.repository.fetchUI.Visible = false
+			pageModule.currentPages.repository.fetchUI.Interactable = false
+			if filesStatus == true then
+				local succes, err = pcall(getAllFiles)
+				filesStatus = succes
+			end
 		end
-		--	local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-		--	local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
-		--	if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
-		--		local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-		--		if request.Success == true then
-		--			print("Successfully pushed chages to: " .. localFile.Name)
-		--		else
-		--			warn("Code: " .. request.StatusCode .. request.StatusMessage)
-		--		end
-		--	end
-		--end
 	end
 end)
 local delateStatus = false
