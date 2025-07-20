@@ -36,13 +36,17 @@ setmetatable(pMod.currentPages, {
 	end,
 })
 function pMod.clonePages()
+	if #script.Parent.Parent.clonedPages:GetChildren() > 0 then
+		for _, page in pairs(script.Parent.Parent.clonedPages:GetChildren()) do
+			page.Parent = nil
+		end
+	end
 	local pages = script.Parent.Parent.pages:GetChildren()
 	table.clear(pMod.currentPages)
 	for _, page in pairs(pages) do
 		local clone = page:Clone()
 		clone.Parent = script.Parent.Parent.clonedPages
 		table.insert(pMod.currentPages, clone)
-		print(#script.Parent.Parent.clonedPages:GetChildren())
 	end
 end
 return pMod
