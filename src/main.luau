@@ -6,7 +6,7 @@ local pageModule = require(script.pageModule)
 local creatorMod = require(script.creatorModule)
 local http = require(script.Parent.http.httpModule)
 local toolbar = plugin:CreateToolbar("GitLink")
-local button = toolbar:CreateButton("1", "Open GitLink", "rbxassetid://133834975760872", "Open Gitlink")
+local button = toolbar:CreateButton("1", "Open GitLink", "rbxassetid://99707391500270", "Open Gitlink")
 local widgetInfo = DockWidgetPluginGuiInfo.new( --size should be minimum 1/4 of screen size
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
 	true, -- Widget will be initially enabled
@@ -78,8 +78,6 @@ function getAllFiles()
 	table.clear(remoteRepo.files)
 	table.clear(local_remote_Files)
 	table.clear(localRepo.scriptDocuments)
-	table.clear(localRepo.allFiles)
-	table.clear(localRepo.allScriptDocuments)
 	local function deep_search(tbl)
 		for key, value in pairs(tbl) do
 			if typeof(value) == "table" then
@@ -106,10 +104,10 @@ function getAllFiles()
 	pageModule.loadingAnimation(main, 3)
 	for _, file in pairs(remoteRepo.files) do
 		local fileName = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
-		if table.find(localRepo.allScriptDocuments, fileName) then
+		if localRepo.scriptDocuments[fileName] then
 			table.insert(local_remote_Files, fileName)
-			if localRepo.allFiles[fileName] then
-				localRepo:setAttribute(localRepo.allFiles[fileName], file.path, remoteRepo.name)
+			if localRepo.scriptDocuments[fileName] then
+				localRepo:setAttribute(localRepo.scriptDocuments[fileName], file.path, remoteRepo.name)
 			end
 		end
 	end
@@ -290,33 +288,35 @@ pageModule.currentPages.editPage.finish.MouseButton1Down:Connect(function()
 	currentPage = pageModule.changePage("login", main)
 end)
 pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
-	currentPage = pageModule.changePage("login", main)
-	pageModule.currentPages.repository.branch.Text = ("< ".."Super-Branch".." >")
-	pageModule.currentPages.repository.repositoryName.Text = "Super-Repository-Name"
-	remoteRepo = nil
-	filesStatus = true
-	loginMod.setName(pageModule.currentPages.login.welcomeLabel)
-	if repositories then
-		if len(repositories) > 0 then
-			for _, button in pairs(pageModule.currentPages.login:WaitForChild("Frame"):GetChildren()) do
-				if button:IsA("TextButton") and not (button.Name == "add") then
-					button:Destroy()
+	if filesStatus == true then
+		currentPage = pageModule.changePage("login", main)
+		pageModule.currentPages.repository.branch.Text = ("< ".."Super-Branch".." >")
+		pageModule.currentPages.repository.repositoryName.Text = "Super-Repository-Name"
+		remoteRepo = nil
+		filesStatus = true
+		loginMod.setName(pageModule.currentPages.login.welcomeLabel)
+		if repositories then
+			if len(repositories) > 0 then
+				for _, button in pairs(pageModule.currentPages.login:WaitForChild("Frame"):GetChildren()) do
+					if button:IsA("TextButton") and not (button.Name == "add") then
+						button:Destroy()
+					end
+				end
+				for name, repo in pairs(repositories) do
+					local button = script.uiElements.button:Clone()
+					button.Parent = pageModule.currentPages.login.Frame
+					button.Text = name
 				end
 			end
-			for name, repo in pairs(repositories) do
-				local button = script.uiElements.button:Clone()
-				button.Parent = pageModule.currentPages.login.Frame
-				button.Text = name
+		end
+		for _, button in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
+			if button:IsA("TextButton") then
+				if not (button.Name == "add") then
+					button.Parent = nil
+				end
 			end
 		end
-	end
-	for _, button in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
-		if button:IsA("TextButton") then
-			if not (button.Name == "add") then
-				button.Parent = nil
-			end
-		end
-	end
+	end	
 end)
 local addFiles = {}
 pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Connect(function()
@@ -369,6 +369,7 @@ pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function
 		pageModule.currentPages.repository.branch.Text = ("< "..remoteRepo.branches[index].." >")
 		remoteRepo.branchToUse = remoteRepo.branches[index]
 	end
+	task.wait(2)
 	if filesStatus == true then
 		local succes, err = pcall(getAllFiles)
 		filesStatus = succes
@@ -385,7 +386,8 @@ pageModule.currentPages.repository.branch.right.MouseButton1Down:Connect(functio
 			pageModule.currentPages.repository.branch.Text = ("< "..remoteRepo.branches[index].." >")
 			remoteRepo.branchToUse = remoteRepo.branches[index]
 		end
-	end	
+	end
+	task.wait(2)
 	if filesStatus == true then
 		local succes, err = pcall(getAllFiles)
 		filesStatus = succes
@@ -466,7 +468,7 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 						end
 					else 
 						local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-						local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+						local localFile = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
 						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
 							local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
 							if request.Success == true then
@@ -528,7 +530,7 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 			for _, file in pairs(remoteRepo.files) do
 				if table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
 					local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-					local localFile = localRepo.allFiles[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+					local localFile = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
 					if fileContent.Success == true then
 						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
 							localFile.Source = http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content)
@@ -600,9 +602,43 @@ pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 			if button.Name == "file" then
 				button.MouseButton1Down:Connect(function()
 					currentFile = button.Text
+					button.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+					for _, button in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
+						if button:IsA("TextButton") then
+							if button.Name == "file" and not (button.Text == currentFile) then
+								button.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
+							end	
+						end
+					end
 				end)
 			end	
 		end
+	end
+end)
+pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function()
+	if filesStatus == true then
+		for _, file in pairs(localRepo.scriptDocuments) do
+			if file.Name == currentFile then
+				if file:GetAttribute("path") then
+					file:SetAttribute("path", nil)
+				end
+			end
+		end
+		for _, file in pairs(remoteRepo.files) do
+			if currentFile == string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1] then
+				local request = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = "Delated " .. file.path, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
+				if request.Success == true then
+					print("Delated a file in repository")
+				else
+					warn("Code: " .. request.StatusCode .. request.StatusMessage)
+				end
+			end
+		end
+	end
+	currentFile = ""
+	if filesStatus == true then
+		local succes, err = pcall(getAllFiles)
+		filesStatus = succes
 	end
 end)
 game:GetService("RunService").Heartbeat:Connect(function()
