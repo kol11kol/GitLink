@@ -1,11 +1,12 @@
 local dataModule = {}
-function dataModule.getData(p, KEY)
+function dataModule.getData(p, KEY) : (p : Plugin, KEY : string) -> any
 	return p:GetSetting(KEY)
 end
-function dataModule.newData(p, NAME, VALUE)
+function dataModule.newData(p, NAME, VALUE) : (p : Plugin, NAME : string, Value : any) -> any
 	p:SetSetting(NAME, VALUE)
 end
-function dataModule.createRepoData(url, key, user, p)
+export type repoData = (url : string, key : string, user : sting, p : Plugin) -> {code : string, name : string}
+function dataModule.createRepoData(url, key, user, p) : repoData
 	local function repoName()
 		for i, str in pairs(string.split(url, "/")) do
 			if str == user then
@@ -18,7 +19,7 @@ function dataModule.createRepoData(url, key, user, p)
 		["USER"] = user,
 		["URL"] = ("https://api.github.com/repos/"..user.."/"..repoName()),
 		["KEY"] = key
-	}
+	} :: {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
 	local repositories = {}
 	local function len(tab)
 		local sum = 0
@@ -30,7 +31,7 @@ function dataModule.createRepoData(url, key, user, p)
 	if not (dataModule.getData(p, "REPOSITORIES") == nil) then
 		repositories = dataModule.getData(p, "REPOSITORIES")
 	end
-	local code
+	local code : string
 	if not (repositories == nil) then
 		if len(repositories) > 0 then
 			if repositories[repository.NAME] then
@@ -50,7 +51,7 @@ function dataModule.createRepoData(url, key, user, p)
 	end	
 	return {code = code, name = repository.NAME}
 end
-function dataModule.updateRepoData(url, key, user, p)
+function dataModule.updateRepoData(url, key, user, p) : repoData
 	local function repoName()
 		for i, str in pairs(string.split(url, "/")) do
 			if str == user then
@@ -63,7 +64,7 @@ function dataModule.updateRepoData(url, key, user, p)
 		["USER"] = user,
 		["URL"] = ("https://api.github.com/repos/"..user.."/"..repoName()),
 		["KEY"] = key
-	}
+	} :: {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
 	local repositories = {}
 	local function len(tab)
 		local sum = 0
@@ -75,7 +76,7 @@ function dataModule.updateRepoData(url, key, user, p)
 	if not (dataModule.getData(p, "REPOSITORIES") == nil) then
 		repositories = dataModule.getData(p, "REPOSITORIES")
 	end
-	local code
+	local code : string
 	if not (repositories == nil) then
 		code = "success"
 		repositories[tostring(repository.NAME)] = repository
@@ -83,6 +84,7 @@ function dataModule.updateRepoData(url, key, user, p)
 	end	
 	return {code = code, name = repository.NAME}
 end
+export type addDefaultRepository = (p : Plugin, repositoryName : string) -> any
 function dataModule.addDefaultRepository(p, repositoryName)
 	local function len(tab)
 		local sum = 0
@@ -98,7 +100,7 @@ function dataModule.addDefaultRepository(p, repositoryName)
 	local repository = {
 		name = repositoryName,
 		place = game.PlaceId
-	}
+	} :: {["name"] : string, ["place"] : number}
 	if not (repositories == nil) then
 		if len(repositories) > 0 then
 			if repositories[repository.name] then
@@ -113,7 +115,8 @@ function dataModule.addDefaultRepository(p, repositoryName)
 		end
 	end
 end
-function dataModule.removeDefaultRepository(p, repositoryName)
+export type removeRepository = (p : Plugin, repositoryName : string) -> any
+function dataModule.removeDefaultRepository(p, repositoryName) : removeRepository
 	local function len(tab)
 		local sum = 0
 		for _, v in pairs(tab) do
@@ -136,7 +139,7 @@ function dataModule.removeDefaultRepository(p, repositoryName)
 		end
 	end
 end
-function dataModule.removeRepositoryData(p, repositoryName)
+function dataModule.removeRepositoryData(p, repositoryName) : removeRepository
 	local function len(tab)
 		local sum = 0
 		for _, v in pairs(tab) do
@@ -160,15 +163,3 @@ function dataModule.removeRepositoryData(p, repositoryName)
 	end
 end
 return dataModule
---[[
-
-		Saved repository data formant:
-		
-		local repo = {
-			name = repositoryName
-			url = repositoryURL
-			token = repositoryToken
-			user = GithubName
-		}
-
-]]
