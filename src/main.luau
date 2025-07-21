@@ -1,13 +1,13 @@
-local remoteReporCreator = require(script.Parent.repositories.remoteRepository)
-local localRepoModule = require(script.Parent.repositories.localRepo)
-local loginMod = require(script.loginPageModule)
-local dataMod = require(script.dataModule)
-local pageModule = require(script.pageModule)
-local creatorMod = require(script.creatorModule)
-local http = require(script.Parent.http.httpModule)
-local toolbar = plugin:CreateToolbar("GitLink")
-local button = toolbar:CreateButton("1", "Open GitLink", "rbxassetid://99707391500270", "Open Gitlink")
-local widgetInfo = DockWidgetPluginGuiInfo.new( --size should be minimum 1/4 of screen size
+local remoteReporCreator : ModuleScript = require(script.Parent.repositories.remoteRepository)
+local localRepoModule : ModuleScript = require(script.Parent.repositories.localRepo)
+local loginMod : ModuleScript = require(script.loginPageModule)
+local dataMod : ModuleScript = require(script.dataModule)
+local pageModule : ModuleScript = require(script.pageModule)
+local creatorMod : ModuleScript = require(script.creatorModule)
+local http : ModuleScript = require(script.Parent.http.httpModule)
+local toolbar : PluginToolbar = plugin:CreateToolbar("GitLink")
+local button : PluginToolbarButton = toolbar:CreateButton("1", "Open GitLink", "rbxassetid://99707391500270", "Open Gitlink")
+local widgetInfo : DockWidgetPluginGuiInfo = DockWidgetPluginGuiInfo.new( --size should be minimum 1/4 of screen size
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
 	true, -- Widget will be initially enabled
 	true, -- Don't override the previous enabled state
@@ -19,19 +19,19 @@ local widgetInfo = DockWidgetPluginGuiInfo.new( --size should be minimum 1/4 of 
 	2160
 )
 local httpService = game:GetService("HttpService")
-local remoteRepo
+local remoteRepo : remoteReporCreator.remoteRepository
 local localRepo
 local local_remote_Files = {}
-local index = 1
-local filesStatus = true
-local currentFile
+local index : number = 1
+local filesStatus : boolean = true
+local currentFile : string
 pageModule.clonePages()
 local main: DockWidgetPluginGui
-local id = 0
-local currentPage
+local id : number = 0
+local currentPage : Frame
 local repositories = {}
 local function len(tab)
-	local sum = 0
+	local sum : number = 0
 	for _, v in pairs(tab) do
 		sum = sum + 1
 	end
@@ -48,7 +48,7 @@ function getAllFiles()
 		if #remoteRepo.files > 0 then
 			for _, file in pairs(remoteRepo.files) do
 				if not table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-					local clone = script.uiElements.file:Clone()
+					local clone : TextButton = script.uiElements.file:Clone()
 					clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
 					clone.Text = (string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1].." [Remote]")
 				end	
@@ -57,7 +57,7 @@ function getAllFiles()
 		if #localRepo.scriptDocuments > 0 then
 			for _, file in pairs(localRepo.scriptDocuments) do
 				if not table.find(local_remote_Files, file.Name, 1) and not remoteRepo.files[file.Name] then
-					local clone = script.uiElements.file:Clone()
+					local clone : TextButton = script.uiElements.file:Clone()
 					clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
 					clone.Text = (file.Name.." [Local]")
 				end	
@@ -65,7 +65,7 @@ function getAllFiles()
 		end
 		if #local_remote_Files then
 			for _, file in pairs(local_remote_Files) do
-				local clone = script.uiElements.file:Clone()
+				local clone : TextButton = script.uiElements.file:Clone()
 				clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
 				if file.path then
 					clone.Text = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
@@ -102,7 +102,7 @@ function getAllFiles()
 	localRepo:getAllAviableScriptDocuments(remoteRepo.name)
 	pageModule.loadingAnimation(main, 3)
 	for _, file in pairs(remoteRepo.files) do
-		local fileName = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
+		local fileName : string = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
 		if localRepo.scriptDocuments[fileName] then
 			table.insert(local_remote_Files, fileName)
 			if localRepo.scriptDocuments[fileName] then
@@ -117,11 +117,11 @@ function getAllFiles()
 end
 function setupRepository(repoName)
 	repositories = dataMod.getData(plugin, "REPOSITORIES")
-	local repoData
+	local repoData : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
 	repoData = repositories[repoName]
 	remoteRepo = remoteReporCreator.remoteRepository(repoData.NAME, repoData.URL, repoData.KEY, repoData.USER)
 	localRepo = localRepoModule.newLocalRepo()
-	local status = http.GET({Url = remoteRepo.url, path = "", token = remoteRepo.token, username = remoteRepo.user}).Success
+	local status : boolean = http.GET({Url = remoteRepo.url, path = "", token = remoteRepo.token, username = remoteRepo.user}).Success
 	local branchesRequest = http.GET({Url = remoteRepo.url, path = "/branches", token = remoteRepo.token, username = remoteRepo.user}).Body
 	for c = 1, #httpService:JSONDecode(branchesRequest), 1 do
 		table.insert(remoteRepo.branches, httpService:JSONDecode(branchesRequest )[c].name)
@@ -163,9 +163,9 @@ button.Click:Connect(function()
 				end
 			end
 		end
-		local function createRepositoryUI(repoName)
+		local function createRepositoryUI(repoName) : (string) -> any
 			currentPage = pageModule.changePage("repository", main)
-			local status = setupRepository(repoName)
+			local status : boolean = setupRepository(repoName)
 			if status == true then
 				pageModule.currentPages.repository.repositoryName.Text = remoteRepo.name
 			elseif status == false then
@@ -175,7 +175,7 @@ button.Click:Connect(function()
 			end
 		end
 		if not (dataMod.getData(plugin, "DEFAULTREPOSITORIES") == nil) then
-			local ids = {}
+			local ids : {[number] : number} = {}
 			for _ , repo in pairs(dataMod.getData(plugin, "DEFAULTREPOSITORIES")) do
 				if not table.find(ids, repo.place, 1) then
 					table.insert(ids, repo.place)
@@ -207,7 +207,7 @@ pageModule.currentPages.login.select.MouseButton1Down:Connect(function()
 		currentPage = pageModule.changePage("creatorPage", main)
 	else
 		currentPage = pageModule.changePage("repository", main)
-		local status = setupRepository(pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text)
+		local status : boolean = setupRepository(pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text)
 		if status == true then
 			pageModule.currentPages.repository.repositoryName.Text = remoteRepo.name
 		elseif status == false then
@@ -227,7 +227,7 @@ pageModule.currentPages.login.edit.MouseButton1Down:Connect(function()
 		currentPage.name.Text = dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER
 		currentPage.url.Text = ("https://github.com/"..dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER.."/"..dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].NAME)
 		if not (dataMod.getData(plugin, "DEFAULTREPOSITORIES") == nil) then
-			local ids = {}
+			local ids : {[number] : number} = {}
 			for _ , repo in pairs(dataMod.getData(plugin, "DEFAULTREPOSITORIES")) do
 				if not table.find(ids, repo.place, 1) then
 					table.insert(ids, repo.place)
@@ -265,15 +265,15 @@ pageModule.currentPages.editPage.autoLoginButton.MouseButton1Down:Connect(functi
 end)
 pageModule.currentPages.editPage.finish.MouseButton1Down:Connect(function()
 	currentEditedRepository = ""
-	local page = pageModule.currentPages.editPage
-	local request = dataMod.updateRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
+	local page : Frame = pageModule.currentPages.editPage
+	local request : dataMod.repoData = dataMod.updateRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
 	page.url.Text = ""
 	page.key.Text = ""
 	page.name.Text = ""
 	if request.code == "success" then
 		print("Repository data updated successfully - Gitlink")
 	end
-	local repo = dataMod.getData(plugin, "REPOSITORIES")[request.name]
+	local repo : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string} = dataMod.getData(plugin, "REPOSITORIES")[request.name]
 	if pageModule.currentPages.editPage.autoLoginButton.Text == "Yes" then
 		if not (dataMod.getData(plugin, "DEFAULTREPOSITORIES") == nil) then
 			dataMod.addDefaultRepository(plugin, repo.NAME)
@@ -302,7 +302,7 @@ pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
 					end
 				end
 				for name, repo in pairs(repositories) do
-					local button = script.uiElements.button:Clone()
+					local button : TextButton = script.uiElements.button:Clone()
 					button.Parent = pageModule.currentPages.login.Frame
 					button.Text = name
 				end
@@ -337,7 +337,7 @@ pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Conn
 		print("No instances selected! - GitLink")
 	end
 	if filesStatus == true then
-		local succes, err = pcall(getAllFiles)
+		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
 	end
 end)
@@ -357,7 +357,7 @@ pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function
 	end
 	task.wait(2)
 	if filesStatus == true then
-		local succes, err = pcall(getAllFiles)
+		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
 	end
 end)
@@ -375,7 +375,7 @@ pageModule.currentPages.repository.branch.right.MouseButton1Down:Connect(functio
 	end
 	task.wait(2)
 	if filesStatus == true then
-		local succes, err = pcall(getAllFiles)
+		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
 	end
 end)
@@ -387,8 +387,8 @@ pageModule.currentPages.creatorPage.autoLoginButton.MouseButton1Down:Connect(fun
 	end
 end)
 pageModule.currentPages.creatorPage.finish.MouseButton1Down:Connect(function()
-	local page = pageModule.currentPages.creatorPage
-	local request = dataMod.createRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
+	local page : Frame= pageModule.currentPages.creatorPage
+	local request : dataMod.repoData = dataMod.createRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
 	page.url.Text = ""
 	page.key.Text = ""
 	page.name.Text = ""
@@ -402,7 +402,7 @@ pageModule.currentPages.creatorPage.finish.MouseButton1Down:Connect(function()
 					end
 				end
 				for name, repo in pairs(repositories) do
-					local button = script.uiElements.button:Clone()
+					local button : TextButton = script.uiElements.button:Clone()
 					button.Parent = pageModule.currentPages.login.Frame
 					button.Text = name
 				end
@@ -439,24 +439,24 @@ end)
 pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connect(function()
 	if string.len(pageModule.currentPages.repository.commitUI.commitDesc.Text) > 0 then
 		if filesStatus == true then
-			local succes, err = pcall(getAllFiles)
+			local succes : boolean, err : string = pcall(getAllFiles)
 			filesStatus = succes
 		end
 		if filesStatus == true then
 			if #remoteRepo.files > 0 then
 				for _, file in pairs(remoteRepo.files) do
 					if not table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-						local request = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = pageModule.currentPages.repository.commitUI.commitDesc.Text, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
+						local request : http.delete = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = pageModule.currentPages.repository.commitUI.commitDesc.Text, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
 						if request.Success == true then
 							print("Delated a file in repository")
 						else
 							warn("Code: " .. request.StatusCode .. request.StatusMessage)
 						end
 					else 
-						local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-						local localFile = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+						local fileContent : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+						local localFile : ScriptDocument? = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
 						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
-							local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+							local request : http.put = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
 							if request.Success == true then
 								print("Successfully pushed chages to: " .. localFile.Name)
 							else
@@ -472,7 +472,7 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 						if remoteRepo.branchToUse == "" and #remoteRepo.branches == 0 and #remoteRepo.files == 0 then
 							remoteRepo.branchToUse = "main"
 						end
-						local request = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = "", Url = remoteRepo.url, fileContent = file.Source, path = ("/contents/" .. "src/" .. file.Name .. ".luau" .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+						local request : http.put = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = "", Url = remoteRepo.url, fileContent = file.Source, path = ("/contents/" .. "src/" .. file.Name .. ".luau" .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
 						if request.Success == true then
 							print("Successfully pushed chages to: " .. file.Name)
 						else
@@ -484,7 +484,7 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 			pageModule.currentPages.repository.commitUI.Visible = false
 			pageModule.currentPages.repository.commitUI.Interactable = false
 			if filesStatus == true then
-				local succes, err = pcall(getAllFiles)
+				local succes : boolean, err : string = pcall(getAllFiles)
 				filesStatus = succes
 			end
 		else
@@ -508,15 +508,15 @@ pageModule.currentPages.repository.fetchUI.exit.MouseButton1Down:Connect(functio
 end)
 pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(function()
 	if filesStatus == true then
-		local succes, err = pcall(getAllFiles)
+		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
 	end
 	if filesStatus == true then
 		if #remoteRepo.files > 0 then
 			for _, file in pairs(remoteRepo.files) do
 				if table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-					local fileContent = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-					local localFile = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+					local fileContent : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+					local localFile : ScriptDocument? = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
 					if fileContent.Success == true then
 						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
 							localFile.Source = http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content)
@@ -526,9 +526,9 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 						warn("Code: " .. fileContent.StatusCode .. fileContent.StatusMessage)
 					end
 				else
-					local file = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+					local file : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
 					if file.Success == true then
-						local localFile = Instance.new("Script", game.ServerScriptService)
+						local localFile : Script = Instance.new("Script", game.ServerScriptService)
 						localFile.Source = http.DecodeBase64(httpService:JSONDecode(file.Body).content)
 						localFile.Name = string.split(httpService:JSONDecode(file.Body).name, ".")[1]
 						localRepo:setAttribute(localFile, httpService:JSONDecode(file.Body).path, remoteRepo.name)
@@ -544,13 +544,13 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 			pageModule.currentPages.repository.fetchUI.Visible = false
 			pageModule.currentPages.repository.fetchUI.Interactable = false
 			if filesStatus == true then
-				local succes, err = pcall(getAllFiles)
+				local succes : boolean, err : string = pcall(getAllFiles)
 				filesStatus = succes
 			end
 		end
 	end
 end)
-local delateStatus = false
+local delateStatus : boolean = false
 pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 	if delateStatus == false then
 		delateStatus = true
@@ -574,7 +574,7 @@ pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 					end
 				end
 				for name, repo in pairs(repositories) do
-					local button = script.uiElements.button:Clone()
+					local button : TextButton = script.uiElements.button:Clone()
 					button.Parent = pageModule.currentPages.login.Frame
 					button.Text = name
 				end
@@ -613,7 +613,7 @@ pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function
 		end
 		for _, file in pairs(remoteRepo.files) do
 			if currentFile == string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1] then
-				local request = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = "Delated " .. file.path, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
+				local request : http.delete = http.DELETE({Branch = remoteRepo.branchToUse, SHA = file.sha, Url = remoteRepo.url, message = "Delated " .. file.path, username = remoteRepo.user, token = remoteRepo.token, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse)})
 				if request.Success == true then
 					print("Delated a file in repository")
 				else
@@ -624,7 +624,7 @@ pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function
 	end
 	currentFile = ""
 	if filesStatus == true then
-		local succes, err = pcall(getAllFiles)
+		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
 	end
 end)
