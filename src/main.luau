@@ -82,11 +82,11 @@ function getAllFiles()
 			if typeof(value) == "table" then
 				if value.type == "blob" then
 					if #remoteRepo.files == 0 then
-						if not (httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name == "README.md") then
+						if string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[2] == "luau" then
 							table.insert(remoteRepo.files, value)
 						end	
 					elseif #remoteRepo.files > 0 then
-						if not (httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name == "README.md") then
+						if string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[2] == "luau" then
 							if not table.find(remoteRepo.files, value, 1) then
 								table.insert(remoteRepo.files, value)
 							end
