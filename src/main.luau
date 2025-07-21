@@ -628,8 +628,28 @@ pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function
 		filesStatus = succes
 	end
 end)
-game:GetService("RunService").Heartbeat:Connect(function()
-	if not (currentPage == nil) then
-		loginMod.buttonsSelection(pageModule.currentPages.login)
-	end	
+function buttonsAnimation()
+	game:GetService("RunService").Heartbeat:Connect(function()
+		if not (currentPage == nil) then
+			loginMod.buttonsSelection(pageModule.currentPages.login)
+		end	
+	end)
+end
+local connection : boolean
+pageModule.currentPages.login.Frame.MouseEnter:Connect(function()
+	connection = true
 end)
+pageModule.currentPages.login.Frame.MouseLeave:Connect(function()
+	connection = false
+end)
+pageModule.currentPages.login.Frame.MouseEnter:Connect(function()
+	connection = true
+	while task.wait(.2) do
+		if not (currentPage == nil) and connection == true then
+			loginMod.buttonsSelection(pageModule.currentPages.login)
+		end
+		if connection == false then
+			break
+		end
+	end
+end)	
