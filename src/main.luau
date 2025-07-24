@@ -318,24 +318,26 @@ pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
 	end	
 end)
 pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Connect(function()
-	pageModule.loadingAnimation(main, 2)
-	if #game:GetService("Selection"):Get() > 0 then
-		for _, item in pairs(game:GetService("Selection"):Get()) do
-			if item:IsA("LuaSourceContainer") then
-				if #local_remote_Files > 0 then
-					if not table.find(local_remote_Files, item.Name, 1) then
+	if filesStatus == true then
+		pageModule.loadingAnimation(main, 2)
+		if #game:GetService("Selection"):Get() > 0 then
+			for _, item in pairs(game:GetService("Selection"):Get()) do
+				if item:IsA("LuaSourceContainer") then
+					if #local_remote_Files > 0 then
+						if not table.find(local_remote_Files, item.Name, 1) then
+							table.insert(localRepo.scriptDocuments, item)
+						end
+					elseif #localRepo.scriptDocuments == 0 then
 						table.insert(localRepo.scriptDocuments, item)
 					end
-				elseif #localRepo.scriptDocuments == 0 then
-					table.insert(localRepo.scriptDocuments, item)
+				elseif not item:IsA("LuaSourceContainer") then
+					print(item.Name.." is not a script! - GitLink")
 				end
-			elseif not item:IsA("LuaSourceContainer") then
-				print(item.Name.." is not a script! - GitLink")
 			end
+		else
+			print("No instances selected! - GitLink")
 		end
-	else
-		print("No instances selected! - GitLink")
-	end
+	end	
 	if filesStatus == true then
 		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
@@ -583,14 +585,79 @@ pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 		currentPage = pageModule.changePage("login", main)
 	end
 end)
+local source : string
+local content : string
 pageModule.currentPages.repository.list.MouseEnter:Connect(function()
-	for _, button in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
+	for _, button : TextButton in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
 		if button:IsA("TextButton") then
 			if button.Name == "file" then
 				button.MouseButton1Down:Connect(function()
-					currentFile = button.Text
+					if not (button.Text == currentFile) then
+						currentFile = button.Text
+						if localRepo.scriptDocuments[currentFile] then
+							if not (source == localRepo.scriptDocuments[currentFile].Source) then
+								source = localRepo.scriptDocuments[currentFile].Source
+							end
+						end
+						for _, file in pairs(remoteRepo.files) do
+							local remoteFile : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+							if remoteFile.Success == true then
+								if string.split(httpService:JSONDecode(remoteFile.Body).name, ".")[1] == currentFile then
+									if not (content == http.DecodeBase64(httpService:JSONDecode(remoteFile.Body).content)) then
+										content = http.DecodeBase64(httpService:JSONDecode(remoteFile.Body).content)
+									end
+								end
+							else
+								print("Can't access remote file, only local source will be displayed if aviable! " .. remoteFile.Code .. " " .. remoteFile.Message)
+							end	
+						end
+						local display : string = ""
+						if source and content then
+							if source == content then
+								local i = 1
+								for line in localRepo.scriptDocuments[currentFile].Source:gmatch("[^\n]+") do
+									display..= "<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" .. " " .. line .. "\n"
+									i = i + 1
+								end
+								pageModule.currentPages.repository.file.ScrollingFrame.code.Text = display
+							else
+								local function compareStrings(oldString, newString)
+									local oldLines = {}
+									local newLines = {}
+									local comparedLines = ""
+									for line in oldString:gmatch("[^\n]+") do
+										table.insert(oldLines, line)
+									end;
+									for line in newString:gmatch("[^\n]+") do
+										table.insert(newLines, line)
+									end;
+									local max = if #oldLines > #newLines then #oldLines else #newLines;
+									for i = 1, max do
+										local oldLine = "";
+										local newLine = "";
+										if oldLines[i] ~= newLines[i] then
+											if not (i > #oldLines) and not (i > #newLines) then
+												comparedLines..= ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" ..  "<mark color=\"#9B0000\" transparency=\"0\">" .. "-" .. "  " .. oldLines[i] .. "</mark>") .. ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" ..  "<mark color=\"#006702\" transparency=\"0\">" .. "+" .. "  " .. newLines[i] .. "</mark>") .. "\n"
+											end;
+											if i > #oldLines then
+												comparedLines..= ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" ..  "<mark color=\"#006702\" transparency=\"0\">" .. "+" .. "  " .. newLines[i].. "</mark>") .. ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>") .. "\n"
+												oldLine = ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" .. " ")
+											elseif i > #newLines then
+												comparedLines..= ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" ..  "<mark color=\"#9B0000\" transparency=\"0\">" .. "-" .. "  " .. oldLines[i] .. "</mark>") .. ("<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" ) .. "\n"
+											end;
+										elseif oldLines[i] == newLines[i] then
+											comparedLines..= "<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" .. oldLines[i] .. "<mark color=\"#141414\" transparency=\"0\">" .. i .. "</mark>" .. newLines[i] .. "\n"
+										end;
+									end
+									return comparedLines
+								end
+								task.wait()
+								pageModule.currentPages.repository.file.ScrollingFrame.code.Text = compareStrings(content, source)
+							end
+						end
+					end	
 					button.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
-					for _, button in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
+					for _, button : TextButton in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
 						if button:IsA("TextButton") then
 							if button.Name == "file" and not (button.Text == currentFile) then
 								button.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
@@ -604,7 +671,7 @@ pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 end)
 pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function()
 	if filesStatus == true then
-		for _, file in pairs(localRepo.scriptDocuments) do
+		for _, file : ScriptDocument in pairs(localRepo.scriptDocuments) do
 			if file.Name == currentFile then
 				if file:GetAttribute("path") then
 					file:SetAttribute("path", nil)
