@@ -343,75 +343,6 @@ pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Conn
 		filesStatus = succes
 	end
 end)
-local source : string
-local content : string
-local escape : {[string] : string} = {
-	['&'] = '&amp;',
-	['<'] = '&lt;',
-	['>'] = '&gt;',
-	['"'] = '&quot;',
-	['\''] = '&apos;',
-}
-function filePreview()
-	if localRepo.scriptDocuments[currentFile] then
-		if not (source == localRepo.scriptDocuments[currentFile].Source) then
-			source = localRepo.scriptDocuments[currentFile].Source
-		end
-	end
-	for _, file in pairs(remoteRepo.files) do
-		local remoteFile : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-		if remoteFile.Success == true then
-			if string.split(httpService:JSONDecode(remoteFile.Body).name, ".")[1] == currentFile then
-				if not (content == http.DecodeBase64(httpService:JSONDecode(remoteFile.Body).content)) then
-					content = http.DecodeBase64(httpService:JSONDecode(remoteFile.Body).content)
-				end
-			end
-		else
-			print("Can't access remote file, only local source will be displayed if aviable! " .. remoteFile.Code .. " " .. remoteFile.Message)
-		end	
-	end
-	local display : string = ""
-	if source and content then
-		if source == content then
-			local i = 1
-			for line in localRepo.scriptDocuments[currentFile].Source:gmatch("[^\n]+") do
-				display..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. " " .. line .. "\n"
-				i = i + 1
-			end
-			pageModule.currentPages.repository.file.ScrollingFrame.code.Text = display
-		else
-			local function compareStrings(oldString, newString)
-				local oldLines = {}
-				local newLines = {}
-				local comparedLines = ""
-				for line in oldString:gmatch("[^\n]+") do
-					table.insert(oldLines, line)
-				end;
-				for line in newString:gmatch("[^\n]+") do
-					table.insert(newLines, line)
-				end;
-				local max = if #oldLines > #newLines then #oldLines else #newLines;
-				for i = 1, max do
-					if oldLines[i] ~= newLines[i] then
-						if not (i > #oldLines) and not (i > #newLines) then
-							comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#006702' transparency='0'>" .. "+" .. string.gsub(newLines[i],`[&<>"\']`, escape) .. "</mark>" .. "  " .. "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#9B0000' transparency='0'>" .. "-" .. "  " .. string.gsub(oldLines[i],`[&<>"\']`, escape) .. "</mark>" .. "\n"
-						end;
-						if i > #oldLines then
-							comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#006702' transparency='0'>" .. "+" .. "  " .. string.gsub(newLines[i],`[&<>"\']`, escape) .. "</mark>" .. "  " .. "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "\n"
-						elseif i > #newLines then
-							comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#9B0000' transparency='0'>" .. "-" .. "  " .. string.gsub(oldLines[i],`[&<>"\']`, escape) .. "</mark>" .. "  " .. "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "\n"
-						end;
-					elseif oldLines[i] == newLines[i] then
-						comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. string.gsub(newLines[i],`[&<>"\']`, escape) .. "\n"
-					end;
-				end
-				return comparedLines
-			end
-			task.wait()
-			pageModule.currentPages.repository.file.ScrollingFrame.code.Text = compareStrings(content, source)
-		end
-	end
-end	
 pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function()
 	if index >= 2 and filesStatus == true then
 		index = index - 1
@@ -427,7 +358,8 @@ pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function
 		remoteRepo.branchToUse = remoteRepo.branches[index]
 	end
 	task.wait(2)
-	filePreview()
+	currentFile = ""
+	pageModule.currentPages.repository.file.ScrollingFrame.code.Text = ""
 	if filesStatus == true then
 		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
@@ -446,7 +378,8 @@ pageModule.currentPages.repository.branch.right.MouseButton1Down:Connect(functio
 		end
 	end
 	task.wait(2)
-	filePreview()
+	currentFile = ""
+	pageModule.currentPages.repository.file.ScrollingFrame.code.Text = ""
 	if filesStatus == true then
 		local succes : boolean, err : string = pcall(getAllFiles)
 		filesStatus = succes
@@ -656,6 +589,75 @@ pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 		currentPage = pageModule.changePage("login", main)
 	end
 end)
+local source : string
+local content : string
+local escape : {[string] : string} = {
+	['&'] = '&amp;',
+	['<'] = '&lt;',
+	['>'] = '&gt;',
+	['"'] = '&quot;',
+	['\''] = '&apos;',
+}
+function filePreview()
+	if localRepo.scriptDocuments[currentFile] then
+		if not (source == localRepo.scriptDocuments[currentFile].Source) then
+			source = localRepo.scriptDocuments[currentFile].Source
+		end
+	end
+	for _, file in pairs(remoteRepo.files) do
+		local remoteFile : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
+		if remoteFile.Success == true then
+			if string.split(httpService:JSONDecode(remoteFile.Body).name, ".")[1] == currentFile then
+				if not (content == http.DecodeBase64(httpService:JSONDecode(remoteFile.Body).content)) then
+					content = http.DecodeBase64(httpService:JSONDecode(remoteFile.Body).content)
+				end
+			end
+		else
+			print("Can't access remote file, only local source will be displayed if aviable! " .. remoteFile.Code .. " " .. remoteFile.Message)
+		end	
+	end
+	local display : string = ""
+	if source and content then
+		if source == content then
+			local i = 1
+			for line in localRepo.scriptDocuments[currentFile].Source:gmatch("[^\n]+") do
+				display..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. " " .. string.gsub(line,`[&<>"\']`, escape) .. "\n"
+				i = i + 1
+			end
+			pageModule.currentPages.repository.file.ScrollingFrame.code.Text = display
+		else
+			local function compareStrings(oldString, newString)
+				local oldLines = {}
+				local newLines = {}
+				local comparedLines = ""
+				for line in oldString:gmatch("[^\n]+") do
+					table.insert(oldLines, line)
+				end;
+				for line in newString:gmatch("[^\n]+") do
+					table.insert(newLines, line)
+				end;
+				local max = if #oldLines > #newLines then #oldLines else #newLines;
+				for i = 1, max do
+					if oldLines[i] ~= newLines[i] then
+						if not (i > #oldLines) and not (i > #newLines) then
+							comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#006702' transparency='0'>" .. "+" .. string.gsub(newLines[i],`[&<>"\']`, escape) .. "</mark>" .. "  " .. "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#9B0000' transparency='0'>" .. "-" .. "  " .. string.gsub(oldLines[i],`[&<>"\']`, escape) .. "</mark>" .. "\n"
+						end;
+						if i > #oldLines then
+							comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#006702' transparency='0'>" .. "+" .. "  " .. string.gsub(newLines[i],`[&<>"\']`, escape) .. "</mark>" .. "  " .. "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "\n"
+						elseif i > #newLines then
+							comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. "<mark color='#9B0000' transparency='0'>" .. "-" .. "  " .. string.gsub(oldLines[i],`[&<>"\']`, escape) .. "</mark>" .. "  " .. "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "\n"
+						end;
+					elseif oldLines[i] == newLines[i] then
+						comparedLines..= "<mark color='#141414' transparency='0'>" .. i .. "</mark>" .. "  " .. string.gsub(newLines[i],`[&<>"\']`, escape) .. "\n"
+					end;
+				end
+				return comparedLines
+			end
+			task.wait()
+			pageModule.currentPages.repository.file.ScrollingFrame.code.Text = compareStrings(content, source)
+		end
+	end
+end	
 pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 	for _, button : TextButton in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
 		if button:IsA("TextButton") then
