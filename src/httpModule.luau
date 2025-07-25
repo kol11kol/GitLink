@@ -109,5 +109,4 @@ function httpModule.DELETE(self) : delete
 		})
 	})
 end
-return httpModule--test
---test2
+return httpModule
