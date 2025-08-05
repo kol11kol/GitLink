@@ -7,6 +7,9 @@ local creatorMod : ModuleScript = require(script.creatorModule)
 local http : ModuleScript = require(script.Parent.http.httpModule)
 local toolbar : PluginToolbar = plugin:CreateToolbar("GitLink")
 local button : PluginToolbarButton = toolbar:CreateButton("1", "Open GitLink", "rbxassetid://99707391500270", "Open Gitlink")
+if game.PlaceId == 0 then
+	print("Plugin only works with published places.")
+end	
 local widgetInfo : DockWidgetPluginGuiInfo = DockWidgetPluginGuiInfo.new( --size should be minimum 1/4 of screen size
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
 	true, -- Widget will be initially enabled
@@ -36,6 +39,96 @@ local function len(tab)
 		sum = sum + 1
 	end
 	return sum
+end
+export type encoding = (data : string) -> string;
+function EncodeBase64(data)
+	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';             
+	return ((data:gsub('.', function(x)
+		local r, b = '', x:byte();
+		for i = 8, 1, -1 do
+			r = r .. (b % 2 ^ i - b % 2 ^ (i - 1) > 0 and '1' or '0');
+		end;
+		return r;
+	end) .. '0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+		if (#x < 6) then 
+			return '';               															
+		end;																-- https://devforum.roblox.com/t/base64-encoding-and-decoding-in-lua/1719860
+		local c = 0;																		
+		for i = 1, 6 do 
+			c = c + (x:sub(i, i) == '1' and 2 ^ (6 - i) or 0) ;
+		end;
+		return b:sub(c + 1, c + 1);
+	end) .. ({ '', '==', '=' })[#data%3+1]);
+end;
+function DecodeBase64(data) : encoding
+	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+	data = string.gsub(data, '[^'..b..'=]', '');
+	return (data:gsub('.', function(x)
+		if (x == '=') then 
+			return '';
+		end;
+		local r, f = '', (b:find(x) - 1);
+		for i = 6, 1, -1 do
+			r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0');
+		end;
+		return r;
+	end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+		if (#x ~= 8) then 
+			return '';
+		end;
+		local c = 0;
+		for i = 1, 8 do
+			c = c + (x:sub(i, i) == '1' and 2 ^ (8 - i) or 0);
+		end;
+		return string.char(c);
+	end));
+end;
+function encryptString(s : string) : (string) -> string
+	local key : string | number = ""
+	if game:GetService("ServerStorage"):FindFirstChild("GitLinkDataKey", false) then
+		if typeof(game:GetService("ServerStorage").GitLinkDataKey.Value) == "number" then
+			key = game:GetService("ServerStorage").GitLinkDataKey.Value;    --                  Use your own numerical key by creating
+		end;                                                                --					IntValue named: 'GitLinkDataKey'.
+	else
+		key = game:GetService("StudioService"):GetUserId();
+	end;
+	local function encryption(str : string) : (string) -> string
+		if key then
+			str = EncodeBase64(str:reverse());
+			local bytes : {number} = {str:byte(1, #str)};
+			local encrypted : {number} = {};
+			for _, b : number in bytes do
+				table.insert(encrypted, b * key);
+			end;
+			return EncodeBase64(table.concat(encrypted, " ")) :: string;
+		end;
+	end;
+	for i : number = 0, 0, 8 do
+		s = encryption(s);
+	end;
+	if s then return s :: string end;
+end
+function decryptString(s : string) : (string) -> string
+	local key : string | number = "";
+	if game:GetService("ServerStorage"):FindFirstChild("GitLinkDataKey", false) then
+		if typeof(game:GetService("ServerStorage").GitLinkDataKey.Value) == "number" then
+			key = game:GetService("ServerStorage").GitLinkDataKey.Value; --                  Use your own numerical key by creating
+		end;                                                             --				     IntValue named: 'GitLinkDataKey'.
+	else                                                                                   
+		key = game:GetService("StudioService"):GetUserId();
+	end;
+	local function decryption(str : string) : (string) -> string
+		str = DecodeBase64(str);
+		local c : string = "";
+		for b : string in str:gmatch("[^%s]+") do
+			c..= string.char(tonumber(b) / key);
+		end
+		return DecodeBase64(c):reverse() :: string;
+	end;
+	for i : number = 0, 0, 8 do
+		s = decryption(s);
+	end;
+	if s then return s :: string end;
 end
 function getAllFiles()
 	filesStatus = false
@@ -119,7 +212,7 @@ function setupRepository(repoName)
 	repositories = dataMod.getData(plugin, "REPOSITORIES")
 	local repoData : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
 	repoData = repositories[repoName]
-	remoteRepo = remoteReporCreator.remoteRepository(repoData.NAME, repoData.URL, repoData.KEY, repoData.USER)
+	remoteRepo = remoteReporCreator.remoteRepository(repoData.NAME, decryptString(repoData.URL), decryptString(repoData.KEY), decryptString(repoData.USER))
 	localRepo = localRepoModule.newLocalRepo()
 	local status : boolean = http.GET({Url = remoteRepo.url, path = "", token = remoteRepo.token, username = remoteRepo.user}).Success
 	local branchesRequest = http.GET({Url = remoteRepo.url, path = "/branches", token = remoteRepo.token, username = remoteRepo.user}).Body
@@ -224,8 +317,8 @@ pageModule.currentPages.login.edit.MouseButton1Down:Connect(function()
 		currentPage = pageModule.changePage("editPage", main)
 		currentPage.TextLabel.Text = ("Edit: "..pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text)
 		currentPage.key.Text = ("<font color='rgb(255,0,0)'>API Key can only be changed!</font>")
-		currentPage.name.Text = dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER
-		currentPage.url.Text = ("https://github.com/"..dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER.."/"..dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].NAME)
+		currentPage.name.Text = decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER)
+		currentPage.url.Text = ("https://github.com/"..decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER).."/"..decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].NAME))
 		if not (dataMod.getData(plugin, "DEFAULTREPOSITORIES") == nil) then
 			local ids : {[number] : number} = {}
 			for _ , repo in pairs(dataMod.getData(plugin, "DEFAULTREPOSITORIES")) do
