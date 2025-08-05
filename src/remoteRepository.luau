@@ -18,7 +18,7 @@ export type remoteRepository = typeof(setmetatable({} :: {
 }, {} :: {
 	model : (remoteRepository, allFiles : {[number] : string}) -> {[string] : any?}
 }))
-function remoteRepository.remoteRepository(name, url, token, user) : remoteRepository
+function remoteRepository.remoteRepository(name, url, token, user)
 	local self = {}
 	self.name = name
 	self.url = url
@@ -37,7 +37,7 @@ function remoteRepository.remoteRepository(name, url, token, user) : remoteRepos
 			end
 		end,
 	})
-	return self
+	return self :: remoteRepository
 end
 function remoteRepository:model(allFiles)
 	return {["src"] = allFiles}
