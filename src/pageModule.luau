@@ -1,16 +1,40 @@
 local pMod = {}
-function pMod.loadingAnimation(main, mT)
-	local t = 0
-	repeat
-		t = t + 1
-		main.Title = "Gitlink Thinking."
-		task.wait(0.5)
-		main.Title = "Gitlink Thinking.."
-		task.wait(0.5)
-		main.Title = "Gitlink Thinking..."
-	until t == mT
-	if t == mT then
-		main.Title = "Gitlink"
+local loadingAnimationCalled : boolean = false
+local tween : Tween
+local clone : Frame
+function pMod.loadingAnimation(main : DockWidgetPluginGui, mT : number, actionText : string) : (DockWidgetPluginGui, number, string) -> any?
+	local function animation(clone : Frame) : (Frame) -> any?
+		loadingAnimationCalled = true
+		clone = script.Parent.Parent.pages.loadingScreen:Clone()
+		clone.Parent = main
+		clone.loading.Rotation = 0
+		tween = game:GetService("TweenService"):Create(clone.loading.UIGradient, TweenInfo.new(mT, Enum.EasingStyle.Sine, Enum.EasingDirection.In, 0, false, 0), {Rotation = 180})
+		tween:Play()
+		tween.Completed:Connect(function()
+			loadingAnimationCalled = false
+			clone.Parent = nil
+		end)
+		local i : number = 0
+		repeat
+			i += 1
+			if clone then
+				clone.textDisplay.Text = actionText .. "."
+				task.wait(.2)
+				clone.textDisplay.Text = actionText .. ".."
+				task.wait(.5)
+				clone.textDisplay.Text = actionText .. "..."
+			end
+		until i == mT
+	end
+	if not (loadingAnimationCalled == true) then
+		animation()
+	else
+		if tween then
+			tween.Completed:Wait()
+			animation()
+		else
+			animation()
+		end
 	end
 end
 function pMod.changePage(targetPage: string, main)
