@@ -14,11 +14,12 @@ export type remoteRepository = typeof(setmetatable({} :: {
 	}},
 	branchToUse : string,
 	token : string,
-	user : string
+	user : string,
+	includeFolders : boolean
 }, {} :: {
 	model : (remoteRepository, allFiles : {[number] : string}) -> {[string] : any?}
 }))
-function remoteRepository.remoteRepository(name, url, token, user)
+function remoteRepository.remoteRepository(name : string, url : string, token : string, user : string, folders : boolean) : (name : string, url : string, token : string, user : string, folders : boolean) -> remoteRepository
 	local self = {}
 	self.name = name
 	self.url = url
@@ -27,6 +28,8 @@ function remoteRepository.remoteRepository(name, url, token, user)
 	self.branchToUse = ""
 	self.token = token
 	self.user = user
+	self.includeFolders = folders
+	self.folders = {}
 	setmetatable(self, remoteRepository)
 	setmetatable(self.files, {
 		__index = function(tab, i)
