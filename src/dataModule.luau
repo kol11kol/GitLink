@@ -50,10 +50,10 @@ function DecodeBase64(data) : encoding
 end;
 function encryptString(s : string) : (string) -> string
 	local key : string | number = ""
-	if game:GetService("ServerStorage"):FindFirstChild("GitLinkDataKey", false) then
-		if typeof(game:GetService("ServerStorage").GitLinkDataKey.Value) == "number" then
-			key = game:GetService("ServerStorage").GitLinkDataKey.Value;    --                  Use your own numerical key by creating
-		end;                                                                --					IntValue named: 'GitLinkDataKey'.
+	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
+		if typeof(script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
+			key = script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+		end;                                                                
 	else
 		key = game:GetService("StudioService"):GetUserId();
 	end;
@@ -75,11 +75,11 @@ function encryptString(s : string) : (string) -> string
 end
 function decryptString(s : string) : (string) -> string
 	local key : string | number = "";
-	if game:GetService("ServerStorage"):FindFirstChild("GitLinkDataKey", false) then
-		if typeof(game:GetService("ServerStorage").GitLinkDataKey.Value) == "number" then
-			key = game:GetService("ServerStorage").GitLinkDataKey.Value; --                  Use your own numerical key by creating
-		end;                                                             --				     IntValue named: 'GitLinkDataKey'.
-	else                                                                                   
+	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
+		if typeof(script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
+			key = script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+		end;                                                                
+	else
 		key = game:GetService("StudioService"):GetUserId();
 	end;
 	local function decryption(str : string) : (string) -> string
@@ -95,8 +95,8 @@ function decryptString(s : string) : (string) -> string
 	end;
 	if s then return s :: string end;
 end
-export type repoData = (url : string, key : string, user : sting, p : Plugin) -> {code : string, name : string}
-function dataModule.createRepoData(url, key, user, p) : repoData
+export type repoData = (url : string, key : string, user : sting, p : Plugin, folders : boolean) -> {code : string, name : string}
+function dataModule.createRepoData(url, key, user, p, folders) : repoData
 	local function repoName()
 		for i, str in pairs(string.split(url, "/")) do
 			if str == user then
@@ -108,8 +108,9 @@ function dataModule.createRepoData(url, key, user, p) : repoData
 		["NAME"] = repoName(),
 		["USER"] = encryptString(user),
 		["URL"] = encryptString("https://api.github.com/repos/"..user.."/"..repoName()),
-		["KEY"] = encryptString(key)
-	} :: {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
+		["KEY"] = encryptString(key),
+		["FOLDERS"] = folders
+	} :: {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string, ["FOLDERS"] : boolean}
 	local repositories = {}
 	local function len(tab)
 		local sum = 0
@@ -141,7 +142,7 @@ function dataModule.createRepoData(url, key, user, p) : repoData
 	end	
 	return {code = code, name = repository.NAME}
 end
-function dataModule.updateRepoData(url, key, user, p) : repoData
+function dataModule.updateRepoData(url, key, user, p, folders) : repoData
 	local function repoName()
 		for i, str in pairs(string.split(url, "/")) do
 			if str == user then
@@ -153,8 +154,9 @@ function dataModule.updateRepoData(url, key, user, p) : repoData
 		["NAME"] = repoName(),
 		["USER"] = encryptString(user),
 		["URL"] = encryptString("https://api.github.com/repos/"..user.."/"..repoName()),
-		["KEY"] = encryptString(key)
-	} :: {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
+		["KEY"] = encryptString(key),
+		["FOLDERS"] = folders
+	} :: {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string, ["FOLDERS"] : boolean}
 	local repositories = {}
 	local function len(tab)
 		local sum = 0
