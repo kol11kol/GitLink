@@ -33,6 +33,7 @@ local main: DockWidgetPluginGui
 local id : number = 0
 local currentPage : Frame
 local repositories = {}
+local ANIMATE : boolean = true
 local function len(tab)
 	local sum : number = 0
 	for _, v in pairs(tab) do
@@ -85,10 +86,10 @@ function DecodeBase64(data) : encoding
 end;
 function encryptString(s : string) : (string) -> string
 	local key : string | number = ""
-	if game:GetService("ServerStorage"):FindFirstChild("GitLinkDataKey", false) then
-		if typeof(game:GetService("ServerStorage").GitLinkDataKey.Value) == "number" then
-			key = game:GetService("ServerStorage").GitLinkDataKey.Value;    --                  Use your own numerical key by creating
-		end;                                                                --					IntValue named: 'GitLinkDataKey'.
+	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
+		if typeof(script.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
+			key = script.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+		end;                                                                
 	else
 		key = game:GetService("StudioService"):GetUserId();
 	end;
@@ -110,11 +111,11 @@ function encryptString(s : string) : (string) -> string
 end
 function decryptString(s : string) : (string) -> string
 	local key : string | number = "";
-	if game:GetService("ServerStorage"):FindFirstChild("GitLinkDataKey", false) then
-		if typeof(game:GetService("ServerStorage").GitLinkDataKey.Value) == "number" then
-			key = game:GetService("ServerStorage").GitLinkDataKey.Value; --                  Use your own numerical key by creating
-		end;                                                             --				     IntValue named: 'GitLinkDataKey'.
-	else                                                                                   
+	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
+		if typeof(script.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
+			key = script.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+		end;                                                                
+	else
 		key = game:GetService("StudioService"):GetUserId();
 	end;
 	local function decryption(str : string) : (string) -> string
@@ -140,10 +141,20 @@ function getAllFiles()
 		end
 		if #remoteRepo.files > 0 then
 			for _, file in pairs(remoteRepo.files) do
-				if not table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
-					local clone : TextButton = script.uiElements.file:Clone()
-					clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
-					clone.Text = (string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1].." [Remote]")
+				local request : http.get = http.GET({
+					Url = remoteRepo.url,
+					path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse),
+					token = remoteRepo.token,
+					username = remoteRepo.user
+				})
+				if request.Success == true then
+					if not table.find(local_remote_Files, string.split(httpService:JSONDecode(request.Body).name, ".")[1], 1) then
+						local clone : TextButton = script.uiElements.file:Clone()
+						clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
+						clone.Text = (string.split(httpService:JSONDecode(request.Body).name, ".")[1].." [Remote]")
+					end
+				else
+					warn("Http error at line 157 main status code: " .. request.StatusCode .. " " .. request.StatusMessage)
 				end	
 			end
 		end
@@ -161,10 +172,57 @@ function getAllFiles()
 				local clone : TextButton = script.uiElements.file:Clone()
 				clone.Parent = pageModule.currentPages.repository.list.ScrollingFrame
 				if file.path then
-					clone.Text = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
+					local request : http.get = http.GET({
+						Url = remoteRepo.url,
+						path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse),
+						token = remoteRepo.token,
+						username = remoteRepo.user
+					})
+					if request.Success == true then
+						clone.Text = string.split(httpService:JSONDecode(request.Body).name, ".")[1]
+					else
+						warn("Http error at line 184 main status code: " .. request.StatusCode .. " " .. request.StatusMessage)
+					end	
 				else
 					clone.Text = file
 				end
+			end
+		end	
+		if ANIMATE == true then
+			local TweenService : TweenService = game:GetService("TweenService")
+			local TWEEN_INFO : TweenInfo = TweenInfo.new(
+				.5,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.Out,
+				0,
+				false,
+				0
+			)
+			for _, button : TextButton | ImageButton in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetDescendants()) do
+				if button:IsA("TextButton") :: TextButton or button:IsA("ImageButton") :: ImageButton and not (button.Name == "add") then
+					local orginalSize : UDim2 = button.Size
+					button.MouseEnter:Connect(function()
+						TweenService:Create(
+							button,
+							TWEEN_INFO,
+							{Size =
+								button.Size - UDim2.new(
+									button.Size.X.Scale / 10,
+									0,
+									button.Size.Y.Scale / 10,
+									0
+								)
+							}
+						):Play()
+					end)
+					button.MouseLeave:Connect(function()
+						TweenService:Create(
+							button,
+							TWEEN_INFO,
+							{Size = orginalSize}
+						):Play()
+					end)
+				end	
 			end
 		end	
 	end
@@ -175,14 +233,34 @@ function getAllFiles()
 			if typeof(value) == "table" then
 				if value.type == "blob" then
 					if #remoteRepo.files == 0 then
-						if string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[2] == "luau" then
-							table.insert(remoteRepo.files, value)
-						end	
-					elseif #remoteRepo.files > 0 then
-						if string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[2] == "luau" then
-							if not table.find(remoteRepo.files, value, 1) then
+						local request : http.get = http.GET({
+							Url = remoteRepo.url,
+							path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse),
+							token = remoteRepo.token,
+							username = remoteRepo.user
+						})
+						if request.Success == true then
+							if string.split(httpService:JSONDecode(request.Body).name, ".")[2] == "luau" then
 								table.insert(remoteRepo.files, value)
 							end
+						else
+							warn("Http error at line 247 main status code: " .. request.StatusCode .. " " .. request.StatusMessage)
+						end	
+					elseif #remoteRepo.files > 0 then
+						local request : http.get = http.GET({
+							Url = remoteRepo.url,
+							path = ("/contents/" .. value.path .. "?ref=" .. remoteRepo.branchToUse),
+							token = remoteRepo.token,
+							username = remoteRepo.user
+						})
+						if request.Success == true then
+							if string.split(httpService:JSONDecode(request.Body).name, ".")[2] == "luau" then
+								if not table.find(remoteRepo.files, value, 1) then
+									table.insert(remoteRepo.files, value)
+								end
+							end
+						else
+							warn("Http error at line 263 main status code: " .. request.StatusCode .. " " .. request.StatusMessage)
 						end	
 					end
 				end
@@ -193,7 +271,7 @@ function getAllFiles()
 	local files : http.get = http.GET({Url = remoteRepo.url, path = ("/git/trees/" .. remoteRepo.branchToUse .. "?recursive=1"), token = remoteRepo.token, username = remoteRepo.user}).Body
 	deep_search(httpService:JSONDecode(files))
 	localRepo:getAllAviableScriptDocuments(remoteRepo.name)
-	pageModule.loadingAnimation(main, 3)
+	pageModule.loadingAnimation(main, 3, "Getting all files")
 	for _, file in pairs(remoteRepo.files) do
 		local fileName : string = string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]
 		if localRepo.scriptDocuments[fileName] then
@@ -204,15 +282,15 @@ function getAllFiles()
 		end
 	end
 	if #remoteRepo.files > 0 or #localRepo.scriptDocuments > 0 then
-		pageModule.loadingAnimation(main, 3)
+		pageModule.loadingAnimation(main, 3, "Creating UI")
 		createUI()
 	end
 end
 function setupRepository(repoName)
 	repositories = dataMod.getData(plugin, "REPOSITORIES")
-	local repoData : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string}
+	local repoData : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string, ["FOLDERS"] : boolean}
 	repoData = repositories[repoName]
-	remoteRepo = remoteReporCreator.remoteRepository(repoData.NAME, decryptString(repoData.URL), decryptString(repoData.KEY), decryptString(repoData.USER))
+	remoteRepo = remoteReporCreator.remoteRepository(repoData.NAME, decryptString(repoData.URL), decryptString(repoData.KEY), decryptString(repoData.USER), repoData.FOLDERS)
 	localRepo = localRepoModule.newLocalRepo()
 	local status : boolean = http.GET({Url = remoteRepo.url, path = "", token = remoteRepo.token, username = remoteRepo.user}).Success
 	local branchesRequest = http.GET({Url = remoteRepo.url, path = "/branches", token = remoteRepo.token, username = remoteRepo.user}).Body
@@ -318,7 +396,13 @@ pageModule.currentPages.login.edit.MouseButton1Down:Connect(function()
 		currentPage.TextLabel.Text = ("Edit: "..pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text)
 		currentPage.key.Text = ("<font color='rgb(255,0,0)'>API Key can only be changed!</font>")
 		currentPage.name.Text = decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER)
-		currentPage.url.Text = ("https://github.com/"..decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER).."/"..decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].NAME))
+		currentPage.url.Text = ("https://github.com/"..decryptString(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].USER).."/"..dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].NAME)
+		local folders : boolean = dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text].FOLDERS
+		if folders == true then
+			pageModule.currentPages.editPage.foldersButton.Text = "Yes"
+		elseif folders == false then
+			pageModule.currentPages.editPage.foldersButton.Text = "No"
+		end
 		if not (dataMod.getData(plugin, "DEFAULTREPOSITORIES") == nil) then
 			local ids : {[number] : number} = {}
 			for _ , repo in pairs(dataMod.getData(plugin, "DEFAULTREPOSITORIES")) do
@@ -356,17 +440,31 @@ pageModule.currentPages.editPage.autoLoginButton.MouseButton1Down:Connect(functi
 		pageModule.currentPages.editPage.autoLoginButton.Text = "Yes"
 	end
 end)
+pageModule.currentPages.editPage.foldersButton.MouseButton1Down:Connect(function()
+	if pageModule.currentPages.editPage.foldersButton.Text == "Yes" then
+		pageModule.currentPages.editPage.foldersButton.Text = "No"
+	elseif pageModule.currentPages.editPage.foldersButton.Text == "No" then
+		pageModule.currentPages.editPage.foldersButton.Text = "Yes"
+	end
+end)
 pageModule.currentPages.editPage.finish.MouseButton1Down:Connect(function()
 	currentEditedRepository = ""
 	local page : Frame = pageModule.currentPages.editPage
-	local request : dataMod.repoData = dataMod.updateRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
+	local folders : boolean = true
+	if pageModule.currentPages.editPage.foldersButton.Text == "Yes" then
+		folders = true
+	end
+	if pageModule.currentPages.editPage.foldersButton.Text == "No" then
+		folders = false
+	end
+	local request : dataMod.repoData = dataMod.updateRepoData(page.url.Text, page.key.Text, page.name.Text, plugin, folders)
 	page.url.Text = ""
 	page.key.Text = ""
 	page.name.Text = ""
 	if request.code == "success" then
 		print("Repository data updated successfully - Gitlink")
 	end
-	local repo : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string} = dataMod.getData(plugin, "REPOSITORIES")[request.name]
+	local repo : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string, ["FOLDERS"] : boolean} = dataMod.getData(plugin, "REPOSITORIES")[request.name]
 	if pageModule.currentPages.editPage.autoLoginButton.Text == "Yes" then
 		if not (dataMod.getData(plugin, "DEFAULTREPOSITORIES") == nil) then
 			dataMod.addDefaultRepository(plugin, repo.NAME)
@@ -412,7 +510,7 @@ pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
 end)
 pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Connect(function()
 	if filesStatus == true then
-		pageModule.loadingAnimation(main, 2)
+		pageModule.loadingAnimation(main, 2, "Processing selected files")
 		if #game:GetService("Selection"):Get() > 0 then
 			for _, item in pairs(game:GetService("Selection"):Get()) do
 				if item:IsA("LuaSourceContainer") then
@@ -485,9 +583,23 @@ pageModule.currentPages.creatorPage.autoLoginButton.MouseButton1Down:Connect(fun
 		pageModule.currentPages.creatorPage.autoLoginButton.Text = "Yes"
 	end
 end)
+pageModule.currentPages.creatorPage.foldersButton.MouseButton1Down:Connect(function()
+	if pageModule.currentPages.creatorPage.foldersButton.Text == "Yes" then
+		pageModule.currentPages.creatorPage.foldersButton.Text = "No"
+	elseif pageModule.currentPages.creatorPage.foldersButton.Text == "No" then
+		pageModule.currentPages.creatorPage.foldersButton.Text = "Yes"
+	end
+end)
 pageModule.currentPages.creatorPage.finish.MouseButton1Down:Connect(function()
 	local page : Frame= pageModule.currentPages.creatorPage
-	local request : dataMod.repoData = dataMod.createRepoData(page.url.Text, page.key.Text, page.name.Text, plugin)
+	local folders : boolean = false
+	if pageModule.currentPages.creatorPage.foldersButton.Text == "Yes" then
+		folders = true
+	end
+	if pageModule.currentPages.creatorPage.foldersButton.Text == "No" then
+		folders = false
+	end
+	local request : dataMod.repoData = dataMod.createRepoData(page.url.Text, page.key.Text, page.name.Text, plugin, folders)
 	page.url.Text = ""
 	page.key.Text = ""
 	page.name.Text = ""
@@ -552,8 +664,13 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 							warn("Code: " .. request.StatusCode .. request.StatusMessage)
 						end
 					else 
-						local fileContent : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-						local localFile : ScriptDocument? = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+						local fileContent : http.get = http.GET({
+							Url = remoteRepo.url,
+							path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), 
+							token = remoteRepo.token,
+							username = remoteRepo.user
+						})
+						local localFile : ScriptDocument? = localRepo.scriptDocuments[string.split(httpService:JSONDecode(fileContent.Body).name, ".")[1]]
 						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
 							local request : http.put = http.PUT({Branch = remoteRepo.branchToUse, Message = pageModule.currentPages.repository.commitUI.commitDesc.Text, SHA = file.sha, Url = remoteRepo.url, fileContent = localFile.Source, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
 							if request.Success == true then
@@ -615,7 +732,7 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 			for _, file in pairs(remoteRepo.files) do
 				if table.find(local_remote_Files, string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1], 1) then
 					local fileContent : http.get = http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user})
-					local localFile : ScriptDocument? = localRepo.scriptDocuments[string.split(httpService:JSONDecode(http.GET({Url = remoteRepo.url, path = ("/contents/" .. file.path .. "?ref=" .. remoteRepo.branchToUse), token = remoteRepo.token, username = remoteRepo.user}).Body).name, ".")[1]]
+					local localFile : ScriptDocument? = localRepo.scriptDocuments[string.split(httpService:JSONDecode(fileContent.Body).name, ".")[1]]
 					if fileContent.Success == true then
 						if not (http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content) == localFile.Source) then
 							localFile.Source = http.DecodeBase64(httpService:JSONDecode(fileContent.Body).content)
@@ -759,11 +876,11 @@ pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 					if not (button.Text == currentFile) then
 						currentFile = button.Text
 						filePreview()
-						button.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+						button.BackgroundColor3 = Color3.fromRGB(16, 16, 21)
 						for _, button : TextButton in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
 							if button:IsA("TextButton") then
 								if button.Name == "file" and not (button.Text == currentFile) then
-									button.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
+									button.BackgroundColor3 = Color3.fromRGB(24, 24, 29)
 								end	
 							end
 						end
@@ -799,6 +916,43 @@ pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function
 		filesStatus = succes
 	end
 end)
+if ANIMATE == true then
+	local TweenService : TweenService = game:GetService("TweenService")
+	local TWEEN_INFO : TweenInfo = TweenInfo.new(
+		.5,
+		Enum.EasingStyle.Quad,
+		Enum.EasingDirection.Out,
+		0,
+		false,
+		0
+	)
+	for _, button : TextButton | ImageButton in pairs(plugin:GetDescendants()) do
+		if button:IsA("TextButton") :: TextButton or button:IsA("ImageButton") :: ImageButton then
+			local orginalSize : UDim2 = button.Size
+			button.MouseEnter:Connect(function()
+				TweenService:Create(
+					button,
+					TWEEN_INFO,
+					{Size =
+						button.Size - UDim2.new(
+							button.Size.X.Scale / 10,
+							0,
+							button.Size.Y.Scale / 10,
+							0
+						)
+					}
+				):Play()
+			end)
+			button.MouseLeave:Connect(function()
+				TweenService:Create(
+					button,
+					TWEEN_INFO,
+					{Size = orginalSize}
+				):Play()
+			end)
+		end	
+	end
+end	
 function buttonsAnimation()
 	game:GetService("RunService").Heartbeat:Connect(function()
 		if not (currentPage == nil) then
@@ -823,4 +977,4 @@ pageModule.currentPages.login.Frame.MouseEnter:Connect(function()
 			break
 		end
 	end
-end)	
+end)
