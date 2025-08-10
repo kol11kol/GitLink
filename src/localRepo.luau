@@ -1,9 +1,9 @@
-local localRepoModule= {}
-localRepoModule.__index = localRepoModule
-function localRepoModule.newLocalRepo()
+local LocalRepository = {}
+LocalRepository.__index = LocalRepository
+function LocalRepository.new()
 	local self = {}
 	self.scriptDocuments = {}
-	setmetatable(self, localRepoModule)
+	setmetatable(self, LocalRepository)
 	setmetatable(self.scriptDocuments, {
 		__index = function(tab, i)
 			for _, file in pairs(self.scriptDocuments) do
@@ -15,7 +15,7 @@ function localRepoModule.newLocalRepo()
 	})
 	return self
 end
-function localRepoModule:getAllAviableScriptDocuments(name)
+function LocalRepository:getAllAviableScriptDocuments(name)
 	for _, object in ipairs(game:GetDescendants()) do
 		if object:IsA("Script") or object:IsA("LocalScript") or object:IsA("ModuleScript") then
 			if not object:IsA("CoreScript") then
@@ -28,9 +28,9 @@ function localRepoModule:getAllAviableScriptDocuments(name)
 		end
 	end
 end
-function localRepoModule:setAttribute(file, path, repositoryName)
+function LocalRepository:setAttribute(file, path, repositoryName)
 	if not file:GetAttribute("path") then
 		file:SetAttribute("path", path .. repositoryName)
 	end	
 end
-return localRepoModule
+return LocalRepository
