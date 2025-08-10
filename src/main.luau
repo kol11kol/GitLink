@@ -86,9 +86,9 @@ function DecodeBase64(data) : encoding
 end;
 function encryptString(s : string) : (string) -> string
 	local key : string | number = ""
-	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
-		if typeof(script.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
-			key = script.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") == true then
+		if typeof(game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value) == "number" then
+			key = game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value;    --						You can use your own data key.
 		end;                                                                
 	else
 		key = game:GetService("StudioService"):GetUserId();
@@ -111,9 +111,9 @@ function encryptString(s : string) : (string) -> string
 end
 function decryptString(s : string) : (string) -> string
 	local key : string | number = "";
-	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
-		if typeof(script.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
-			key = script.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") == true then
+		if typeof(game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value) == "number" then
+			key = game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value;    --						You can use your own data key.
 		end;                                                                
 	else
 		key = game:GetService("StudioService"):GetUserId();
@@ -242,6 +242,12 @@ function getAllFiles()
 						if request.Success == true then
 							if string.split(httpService:JSONDecode(request.Body).name, ".")[2] == "luau" then
 								table.insert(remoteRepo.files, value)
+							else
+								if httpService:JSONDecode(request.Body).name == "STRUCTURE.JSON" then
+									if not (#remoteRepo.STRUCTURE > 0) then
+										remoteRepo.STRUCTURE = httpService:JSONDecode(httpService:JSONDecode(request.Body).content)
+									end
+								end
 							end
 						else
 							warn("Http error at line 247 main status code: " .. request.StatusCode .. " " .. request.StatusMessage)
@@ -258,10 +264,21 @@ function getAllFiles()
 								if not table.find(remoteRepo.files, value, 1) then
 									table.insert(remoteRepo.files, value)
 								end
+							else
+								if httpService:JSONDecode(request.Body).name == "STRUCTURE.JSON" then
+									if not (#remoteRepo.STRUCTURE > 0) then
+										remoteRepo.STRUCTURE = httpService:JSONDecode(httpService:JSONDecode(request.Body).content)
+									end
+								end
 							end
 						else
 							warn("Http error at line 263 main status code: " .. request.StatusCode .. " " .. request.StatusMessage)
 						end	
+					end
+				end
+				if value.type == "tree" then
+					if not table.find(remoteRepo.folders, value, 1) then
+						table.insert(remoteRepo.folders, value)
 					end
 				end
 				deep_search(value)
@@ -291,7 +308,7 @@ function setupRepository(repoName)
 	local repoData : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string, ["FOLDERS"] : boolean}
 	repoData = repositories[repoName]
 	remoteRepo = remoteReporCreator.remoteRepository(repoData.NAME, decryptString(repoData.URL), decryptString(repoData.KEY), decryptString(repoData.USER), repoData.FOLDERS)
-	localRepo = localRepoModule.newLocalRepo()
+	localRepo = localRepoModule.new()
 	local status : boolean = http.GET({Url = remoteRepo.url, path = "", token = remoteRepo.token, username = remoteRepo.user}).Success
 	local branchesRequest = http.GET({Url = remoteRepo.url, path = "/branches", token = remoteRepo.token, username = remoteRepo.user}).Body
 	for c = 1, #httpService:JSONDecode(branchesRequest), 1 do
