@@ -50,9 +50,9 @@ function DecodeBase64(data) : encoding
 end;
 function encryptString(s : string) : (string) -> string
 	local key : string | number = ""
-	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
-		if typeof(script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
-			key = script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") then
+		if typeof(game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value) == "number" then
+			key = game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value;    --						You can use your own data key.
 		end;                                                                
 	else
 		key = game:GetService("StudioService"):GetUserId();
@@ -75,9 +75,9 @@ function encryptString(s : string) : (string) -> string
 end
 function decryptString(s : string) : (string) -> string
 	local key : string | number = "";
-	if script.Parent.Configuration.CUSTOM_DATA_KEY_ENABLED.Value == true then
-		if typeof(script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value) == "number" then
-			key = script.Parent.Parent.Configuration.CUSTOM_DATA_KEY.Value;    --						You can use your own data key.
+	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") == true then
+		if typeof(game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value) == "number" then
+			key = game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY").Value;    --						You can use your own data key.
 		end;                                                                
 	else
 		key = game:GetService("StudioService"):GetUserId();
