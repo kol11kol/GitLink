@@ -1,7 +1,10 @@
 local pMod = {}
+
 local loadingAnimationCalled : boolean = false
 local tween : Tween
 local clone : Frame
+
+
 function pMod.loadingAnimation(main : DockWidgetPluginGui, mT : number, actionText : string) : (DockWidgetPluginGui, number, string) -> any?
 	local function animation(clone : Frame) : (Frame) -> any?
 		loadingAnimationCalled = true
@@ -37,6 +40,8 @@ function pMod.loadingAnimation(main : DockWidgetPluginGui, mT : number, actionTe
 		end
 	end
 end
+
+
 function pMod.changePage(targetPage: string, main)
 	local page = pMod.currentPages[targetPage]
 	if page then
@@ -49,6 +54,8 @@ function pMod.changePage(targetPage: string, main)
 	end
 	return page
 end
+
+
 pMod.currentPages = {}
 setmetatable(pMod.currentPages, {
 	__index = function(self, index)
@@ -59,6 +66,8 @@ setmetatable(pMod.currentPages, {
 		end
 	end,
 })
+
+
 function pMod.clonePages()
 	if #script.Parent.Parent.clonedPages:GetChildren() > 0 then
 		for _, page in pairs(script.Parent.Parent.clonedPages:GetChildren()) do
@@ -73,4 +82,6 @@ function pMod.clonePages()
 		table.insert(pMod.currentPages, clone)
 	end
 end
+
+
 return pMod
