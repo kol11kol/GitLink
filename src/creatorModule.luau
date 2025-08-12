@@ -1,10 +1,12 @@
 local creatormodule = {}
+
 local data = {
 	['name'] = "",
 	['url'] = "",
 	['key'] = "",
 	['autoLogin'] = true
 }
+
 function creatormodule.getData(main)
 	data.name = main.creatorPage.name.Text
 	data.url = main.creatorPage.url.Text
@@ -15,6 +17,8 @@ function creatormodule.getData(main)
 		data.key = ""
 	end)
 end
+
+
 function creatormodule.autoLoginButton(button)
 	if data.autoLogin == false then
 		data.autoLogin = true
@@ -24,7 +28,11 @@ function creatormodule.autoLoginButton(button)
 		button.Text = "Yes"
 	end
 end
+
+
 function creatormodule.requestData(dataRequest)
 	return data[dataRequest]
 end
+
+
 return creatormodule
