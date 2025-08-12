@@ -1,4 +1,5 @@
 local lPage = {}
+
 function lPage.buttonsSelection(loginPage)
 	for _, button in pairs(loginPage.Frame:GetDescendants()) do
 		if button:IsA("TextButton") then
@@ -15,7 +16,11 @@ function lPage.buttonsSelection(loginPage)
 		end
 	end
 end
+
+
 function lPage.setName(label)
 	label.Text = ("Welcome, "..game:GetService("Players"):GetNameFromUserIdAsync(game:GetService("StudioService"):GetUserId()).."!")
 end
+
+
 return lPage
