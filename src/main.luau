@@ -1,15 +1,20 @@
-local remoteReporCreator : ModuleScript = require(script.Parent.repositories.remoteRepository)
-local localRepoModule : ModuleScript = require(script.Parent.repositories.localRepo)
+local remoteReporCreator = require(script.Parent.repositories.remoteRepository)
+local localRepoModule = require(script.Parent.repositories.localRepo)
 local loginMod : ModuleScript = require(script.loginPageModule)
 local dataMod : ModuleScript = require(script.dataModule)
 local pageModule : ModuleScript = require(script.pageModule)
 local creatorMod : ModuleScript = require(script.creatorModule)
-local http : ModuleScript = require(script.Parent.http.httpModule)
+local http = require(script.Parent.http.httpModule)
+local httpService = game:GetService("HttpService")
+
 local toolbar : PluginToolbar = plugin:CreateToolbar("GitLink")
 local button : PluginToolbarButton = toolbar:CreateButton("1", "Open GitLink", "rbxassetid://99707391500270", "Open Gitlink")
+button.ClickableWhenViewportHidden = true
+
 if game.PlaceId == 0 then
-	print("Plugin only works with published places.")
-end	
+	print("Plugin may experience errors while working with unpublished places.")
+end
+
 local widgetInfo : DockWidgetPluginGuiInfo = DockWidgetPluginGuiInfo.new( --size should be minimum 1/4 of screen size
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
 	true, -- Widget will be initially enabled
@@ -21,14 +26,16 @@ local widgetInfo : DockWidgetPluginGuiInfo = DockWidgetPluginGuiInfo.new( --size
 	3840,
 	2160
 )
-local httpService = game:GetService("HttpService")
+
 local remoteRepo : remoteReporCreator.remoteRepository
 local localRepo
 local local_remote_Files = {}
 local index : number = 1
 local filesStatus : boolean = true
 local currentFile : string
+
 pageModule.clonePages()
+
 local main: DockWidgetPluginGui
 local id : number = 0
 local currentPage : Frame
@@ -41,7 +48,10 @@ local function len(tab)
 	end
 	return sum
 end
+
+
 export type encoding = (data : string) -> string;
+
 function EncodeBase64(data)
 	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';             
 	return ((data:gsub('.', function(x)
@@ -84,6 +94,7 @@ function DecodeBase64(data) : encoding
 		return string.char(c);
 	end));
 end;
+
 function encryptString(s : string) : (string) -> string
 	local key : string | number = ""
 	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") == true then
@@ -109,6 +120,7 @@ function encryptString(s : string) : (string) -> string
 	end;
 	if s then return s :: string end;
 end
+
 function decryptString(s : string) : (string) -> string
 	local key : string | number = "";
 	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") == true then
@@ -131,6 +143,41 @@ function decryptString(s : string) : (string) -> string
 	end;
 	if s then return s :: string end;
 end
+
+
+function folders()
+	local function createSTRUCTURE()
+		local request : http.put = http.PUT({
+			Branch = remoteRepo.branchToUse,
+			Message = "Generated STRUCTURE.JSON",
+			SHA = "",
+			Url = remoteRepo.url,
+			fileContent = remoteRepo.STRUCTURE,
+			path = ("/contents/" .. "STRUCTURE" .. ".JSON" .. "?ref=" .. remoteRepo.branchToUse),
+			token = remoteRepo.token, 
+			username = remoteRepo.user
+		})
+		if request.Success == false then
+			warn("Failed to create STRUCTURE.JSON file")
+		end
+	end
+	local function updateSTRUCTURE()
+		
+	end
+	if remoteRepo.STRUCTURE then
+		-- remove files if they don't exsist loaclly
+	else
+		if remoteRepo.includeFolders == true then
+			remoteRepo:setUpFolders(localRepo.scriptDocuments)
+			remoteRepo:filesStructure(localRepo.scriptDocuments)
+		else
+			remoteRepo:filesStructure(localRepo.scriptDocuments)
+		end	
+	end
+	print(remoteRepo.STRUCTURE)
+end
+
+
 function getAllFiles()
 	filesStatus = false
 	local function createUI()
@@ -244,8 +291,8 @@ function getAllFiles()
 								table.insert(remoteRepo.files, value)
 							else
 								if httpService:JSONDecode(request.Body).name == "STRUCTURE.JSON" then
-									if not (#remoteRepo.STRUCTURE > 0) then
-										remoteRepo.STRUCTURE = httpService:JSONDecode(httpService:JSONDecode(request.Body).content)
+									if not remoteRepo.STRUCTURE then
+										remoteRepo.STRUCTURE = httpService:JSONDecode(request.Body).content
 									end
 								end
 							end
@@ -266,8 +313,8 @@ function getAllFiles()
 								end
 							else
 								if httpService:JSONDecode(request.Body).name == "STRUCTURE.JSON" then
-									if not (#remoteRepo.STRUCTURE > 0) then
-										remoteRepo.STRUCTURE = httpService:JSONDecode(httpService:JSONDecode(request.Body).content)
+									if not remoteRepo.STRUCTURE then
+										remoteRepo.STRUCTURE = httpService:JSONDecode(request.Body).content
 									end
 								end
 							end
@@ -299,10 +346,13 @@ function getAllFiles()
 		end
 	end
 	if #remoteRepo.files > 0 or #localRepo.scriptDocuments > 0 then
+		folders()
 		pageModule.loadingAnimation(main, 3, "Creating UI")
 		createUI()
 	end
 end
+
+
 function setupRepository(repoName)
 	repositories = dataMod.getData(plugin, "REPOSITORIES")
 	local repoData : {["NAME"] : string, ["USER"] : string, ["URL"] : string, ["KEY"] : string, ["FOLDERS"] : boolean}
@@ -326,6 +376,8 @@ function setupRepository(repoName)
 	end	
 	if status then return status end
 end
+
+
 button.Click:Connect(function()
 	if main then
 		main.Enabled = true
@@ -390,6 +442,8 @@ button.Click:Connect(function()
 		end
 	end
 end)
+
+
 pageModule.currentPages.login.select.MouseButton1Down:Connect(function()
 	if pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Name == "add" then
 		currentPage = pageModule.changePage("creatorPage", main)
@@ -405,7 +459,11 @@ pageModule.currentPages.login.select.MouseButton1Down:Connect(function()
 		end
 	end
 end)
+
+
 local currentEditedRepository: string
+
+
 pageModule.currentPages.login.edit.MouseButton1Down:Connect(function()
 	currentEditedRepository = pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text
 	if len(dataMod.getData(plugin, "REPOSITORIES")[pageModule.currentPages.login.Frame.UIPageLayout.CurrentPage.Text]) > 0 then
@@ -450,6 +508,8 @@ pageModule.currentPages.login.edit.MouseButton1Down:Connect(function()
 		print("Couldn't access repository data - Gitlink")
 	end
 end)
+
+
 pageModule.currentPages.editPage.autoLoginButton.MouseButton1Down:Connect(function()
 	if pageModule.currentPages.editPage.autoLoginButton.Text == "Yes" then
 		pageModule.currentPages.editPage.autoLoginButton.Text = "No"
@@ -457,6 +517,8 @@ pageModule.currentPages.editPage.autoLoginButton.MouseButton1Down:Connect(functi
 		pageModule.currentPages.editPage.autoLoginButton.Text = "Yes"
 	end
 end)
+
+
 pageModule.currentPages.editPage.foldersButton.MouseButton1Down:Connect(function()
 	if pageModule.currentPages.editPage.foldersButton.Text == "Yes" then
 		pageModule.currentPages.editPage.foldersButton.Text = "No"
@@ -464,6 +526,8 @@ pageModule.currentPages.editPage.foldersButton.MouseButton1Down:Connect(function
 		pageModule.currentPages.editPage.foldersButton.Text = "Yes"
 	end
 end)
+
+
 pageModule.currentPages.editPage.finish.MouseButton1Down:Connect(function()
 	currentEditedRepository = ""
 	local page : Frame = pageModule.currentPages.editPage
@@ -494,6 +558,8 @@ pageModule.currentPages.editPage.finish.MouseButton1Down:Connect(function()
 	end
 	currentPage = pageModule.changePage("login", main)
 end)
+
+
 pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
 	if filesStatus == true then
 		currentPage = pageModule.changePage("login", main)
@@ -525,6 +591,8 @@ pageModule.currentPages.repository.home.MouseButton1Down:Connect(function()
 		end
 	end	
 end)
+
+
 pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Connect(function()
 	if filesStatus == true then
 		pageModule.loadingAnimation(main, 2, "Processing selected files")
@@ -551,6 +619,8 @@ pageModule.currentPages.repository.list.ScrollingFrame.add.MouseButton1Down:Conn
 		filesStatus = succes
 	end
 end)
+
+
 pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function()
 	if index >= 2 and filesStatus == true then
 		index = index - 1
@@ -573,6 +643,8 @@ pageModule.currentPages.repository.branch.left.MouseButton1Down:Connect(function
 		filesStatus = succes
 	end
 end)
+
+
 pageModule.currentPages.repository.branch.right.MouseButton1Down:Connect(function()
 	if not (#remoteRepo.branches == 0) and filesStatus == true then
 		if not (index == #remoteRepo.branches) then
@@ -593,6 +665,8 @@ pageModule.currentPages.repository.branch.right.MouseButton1Down:Connect(functio
 		filesStatus = succes
 	end
 end)
+
+
 pageModule.currentPages.creatorPage.autoLoginButton.MouseButton1Down:Connect(function()
 	if pageModule.currentPages.creatorPage.autoLoginButton.Text == "Yes" then
 		pageModule.currentPages.creatorPage.autoLoginButton.Text = "No"
@@ -600,6 +674,7 @@ pageModule.currentPages.creatorPage.autoLoginButton.MouseButton1Down:Connect(fun
 		pageModule.currentPages.creatorPage.autoLoginButton.Text = "Yes"
 	end
 end)
+
 pageModule.currentPages.creatorPage.foldersButton.MouseButton1Down:Connect(function()
 	if pageModule.currentPages.creatorPage.foldersButton.Text == "Yes" then
 		pageModule.currentPages.creatorPage.foldersButton.Text = "No"
@@ -607,6 +682,8 @@ pageModule.currentPages.creatorPage.foldersButton.MouseButton1Down:Connect(funct
 		pageModule.currentPages.creatorPage.foldersButton.Text = "Yes"
 	end
 end)
+
+
 pageModule.currentPages.creatorPage.finish.MouseButton1Down:Connect(function()
 	local page : Frame= pageModule.currentPages.creatorPage
 	local folders : boolean = false
@@ -642,12 +719,15 @@ pageModule.currentPages.creatorPage.finish.MouseButton1Down:Connect(function()
 	end
 	currentPage = pageModule.changePage("login", main)
 end)
+
+
 pageModule.currentPages.creatorPage.exit.MouseButton1Down:Connect(function()
 	pageModule.currentPages.creatorPage.url.Text = ""
 	pageModule.currentPages.creatorPage.key.Text = ""
 	pageModule.currentPages.creatorPage.name.Text = ""
 	currentPage = pageModule.changePage("login", main)
 end)
+
 pageModule.currentPages.editPage.exit.MouseButton1Down:Connect(function()
 	currentEditedRepository = ""
 	pageModule.currentPages.editPage.url.Text = ""
@@ -655,15 +735,19 @@ pageModule.currentPages.editPage.exit.MouseButton1Down:Connect(function()
 	pageModule.currentPages.editPage.name.Text = ""
 	currentPage = pageModule.changePage("login", main)
 end)
+
 pageModule.currentPages.repository.push.MouseButton1Down:Connect(function()
 	pageModule.currentPages.repository.commitUI.Visible = true
 	pageModule.currentPages.repository.commitUI.Interactable = true
 	pageModule.currentPages.repository.commitUI.title.Text = ("Commit to "..remoteRepo.name)
 end)
+
 pageModule.currentPages.repository.commitUI.exit.MouseButton1Down:Connect(function()
 	pageModule.currentPages.repository.commitUI.Visible = false
 	pageModule.currentPages.repository.commitUI.Interactable = false
 end)
+
+
 pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connect(function()
 	if string.len(pageModule.currentPages.repository.commitUI.commitDesc.Text) > 0 then
 		if filesStatus == true then
@@ -725,6 +809,8 @@ pageModule.currentPages.repository.commitUI.commitButton.MouseButton1Down:Connec
 		end	
 	end	
 end)
+
+
 pageModule.currentPages.repository.fetch.MouseButton1Down:Connect(function()
 	pageModule.currentPages.repository.fetchUI.Visible = true
 	pageModule.currentPages.repository.fetchUI.Interactable = true
@@ -735,10 +821,14 @@ pageModule.currentPages.repository.fetch.MouseButton1Down:Connect(function()
 		pageModule.currentPages.repository.fetchUI.changes.Text = ("By clicking continue no local file(s) will be delated.")
 	end	
 end)
+
+
 pageModule.currentPages.repository.fetchUI.exit.MouseButton1Down:Connect(function()
 	pageModule.currentPages.repository.fetchUI.Visible = false
 	pageModule.currentPages.repository.fetchUI.Interactable = false
 end)
+
+
 pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(function()
 	if filesStatus == true then
 		local succes : boolean, err : string = pcall(getAllFiles)
@@ -783,7 +873,11 @@ pageModule.currentPages.repository.fetchUI.continue.MouseButton1Down:Connect(fun
 		end
 	end
 end)
+
+
 local delateStatus : boolean = false
+
+
 pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 	if delateStatus == false then
 		delateStatus = true
@@ -816,6 +910,8 @@ pageModule.currentPages.editPage.delate.MouseButton1Down:Connect(function()
 		currentPage = pageModule.changePage("login", main)
 	end
 end)
+
+
 local source : string
 local content : string
 local escape : {[string] : string} = {
@@ -825,6 +921,8 @@ local escape : {[string] : string} = {
 	['"'] = '&quot;',
 	['\''] = '&apos;',
 }
+
+
 function filePreview()
 	if localRepo.scriptDocuments[currentFile] then
 		if not (source == localRepo.scriptDocuments[currentFile].Source) then
@@ -885,6 +983,8 @@ function filePreview()
 		end
 	end
 end	
+
+
 pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 	for _, button : TextButton in pairs(pageModule.currentPages.repository.list.ScrollingFrame:GetChildren()) do
 		if button:IsA("TextButton") then
@@ -907,6 +1007,8 @@ pageModule.currentPages.repository.list.MouseEnter:Connect(function()
 		end
 	end
 end)
+
+
 pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function()
 	if filesStatus == true then
 		for _, file : ScriptDocument in pairs(localRepo.scriptDocuments) do
@@ -933,6 +1035,8 @@ pageModule.currentPages.repository.file.delate.MouseButton1Down:Connect(function
 		filesStatus = succes
 	end
 end)
+
+
 if ANIMATE == true then
 	local TweenService : TweenService = game:GetService("TweenService")
 	local TWEEN_INFO : TweenInfo = TweenInfo.new(
@@ -970,6 +1074,7 @@ if ANIMATE == true then
 		end	
 	end
 end	
+
 function buttonsAnimation()
 	game:GetService("RunService").Heartbeat:Connect(function()
 		if not (currentPage == nil) then
@@ -977,13 +1082,19 @@ function buttonsAnimation()
 		end	
 	end)
 end
+
+
 local connection : boolean
+
 pageModule.currentPages.login.Frame.MouseEnter:Connect(function()
 	connection = true
 end)
+
 pageModule.currentPages.login.Frame.MouseLeave:Connect(function()
 	connection = false
 end)
+
+
 pageModule.currentPages.login.Frame.MouseEnter:Connect(function()
 	connection = true
 	while task.wait(.2) do
