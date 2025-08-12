@@ -1,7 +1,11 @@
 local httpModule = {}
+
 httpModule.__index = httpModule
+
 local http = game:GetService("HttpService")
+
 export type encoding = (data : string) -> string
+
 function httpModule.EncodeBase64(data)
 	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'             
 	return ((data:gsub('.', function(x)
@@ -21,6 +25,7 @@ function httpModule.EncodeBase64(data)
 		return b:sub(c + 1, c + 1)
 	end) .. ({ '', '==', '=' })[#data%3+1])
 end
+
 function httpModule.DecodeBase64(data) : encoding
 	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 	data = string.gsub(data, '[^'..b..'=]', '')
@@ -44,6 +49,8 @@ function httpModule.DecodeBase64(data) : encoding
 		return string.char(c)
 	end))
 end
+
+
 export type put = (self : {
 	Url: string, 
 	username : string, 
@@ -54,6 +61,8 @@ export type put = (self : {
 	SHA : string,
 	path : string
 }) -> {Success : boolean, StatusCode : number, StatusMessage : string, Headers : string, Body : string}
+
+
 function httpModule.PUT(self) : put
 	return http:RequestAsync({
 		Url = self.Url .. self.path,
@@ -70,12 +79,16 @@ function httpModule.PUT(self) : put
 		})	
 	})
 end
+
+
 export type get = (self : {
 	Url : string, 
 	username : string, 
 	token : string,
 	path : string,
 }) -> {Success : boolean, StatusCode : number, StatusMessage : string, Headers : string, Body : string}
+
+
 function httpModule.GET(self) : get
 	return http:RequestAsync({
 		Method = "GET",
@@ -86,6 +99,8 @@ function httpModule.GET(self) : get
 		},
 	})
 end
+
+
 export type delete = (self : {
 	Url : string, 
 	username : string, 
@@ -95,6 +110,8 @@ export type delete = (self : {
 	SHA : string,
 	path : string
 }) -> {Success : boolean, StatusCode : number, StatusMessage : string, Headers : string, Body : string}
+
+
 function httpModule.DELETE(self) : delete
 	return http:RequestAsync({
 		Method = "DELETE",
@@ -109,4 +126,6 @@ function httpModule.DELETE(self) : delete
 		})
 	})
 end
+
+
 return httpModule
