@@ -1,11 +1,18 @@
 local dataModule = {}
+
 function dataModule.getData(p, KEY) : (p : Plugin, KEY : string) -> any
 	return p:GetSetting(KEY)
 end
+
+
 function dataModule.newData(p, NAME, VALUE) : (p : Plugin, NAME : string, Value : any) -> any
 	p:SetSetting(NAME, VALUE)
 end
+
+
 export type encoding = (data : string) -> string;
+
+
 function EncodeBase64(data)
 	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';             
 	return ((data:gsub('.', function(x)
@@ -25,6 +32,7 @@ function EncodeBase64(data)
 		return b:sub(c + 1, c + 1);
 	end) .. ({ '', '==', '=' })[#data%3+1]);
 end;
+
 function DecodeBase64(data) : encoding
 	local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	data = string.gsub(data, '[^'..b..'=]', '');
@@ -48,6 +56,8 @@ function DecodeBase64(data) : encoding
 		return string.char(c);
 	end));
 end;
+
+
 function encryptString(s : string) : (string) -> string
 	local key : string | number = ""
 	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") then
@@ -73,6 +83,7 @@ function encryptString(s : string) : (string) -> string
 	end;
 	if s then return s :: string end;
 end
+
 function decryptString(s : string) : (string) -> string
 	local key : string | number = "";
 	if game:GetService("ServerStorage"):FindFirstChild("CUSTOM_DATA_KEY") == true then
@@ -95,7 +106,10 @@ function decryptString(s : string) : (string) -> string
 	end;
 	if s then return s :: string end;
 end
+
+
 export type repoData = (url : string, key : string, user : sting, p : Plugin, folders : boolean) -> {code : string, name : string}
+
 function dataModule.createRepoData(url, key, user, p, folders) : repoData
 	local function repoName()
 		for i, str in pairs(string.split(url, "/")) do
@@ -142,6 +156,8 @@ function dataModule.createRepoData(url, key, user, p, folders) : repoData
 	end	
 	return {code = code, name = repository.NAME}
 end
+
+
 function dataModule.updateRepoData(url, key, user, p, folders) : repoData
 	local function repoName()
 		for i, str in pairs(string.split(url, "/")) do
@@ -176,7 +192,11 @@ function dataModule.updateRepoData(url, key, user, p, folders) : repoData
 	end	
 	return {code = code, name = repository.NAME}
 end
+
+
 export type addDefaultRepository = (p : Plugin, repositoryName : string) -> any
+
+
 function dataModule.addDefaultRepository(p, repositoryName)
 	local function len(tab)
 		local sum = 0
@@ -207,7 +227,9 @@ function dataModule.addDefaultRepository(p, repositoryName)
 		end
 	end
 end
+
 export type removeRepository = (p : Plugin, repositoryName : string) -> any
+
 function dataModule.removeDefaultRepository(p, repositoryName) : removeRepository
 	local function len(tab)
 		local sum = 0
@@ -231,6 +253,8 @@ function dataModule.removeDefaultRepository(p, repositoryName) : removeRepositor
 		end
 	end
 end
+
+
 function dataModule.removeRepositoryData(p, repositoryName) : removeRepository
 	local function len(tab)
 		local sum = 0
@@ -254,4 +278,6 @@ function dataModule.removeRepositoryData(p, repositoryName) : removeRepository
 		end
 	end
 end
+
+
 return dataModule
