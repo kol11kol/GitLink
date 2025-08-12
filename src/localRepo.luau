@@ -1,5 +1,7 @@
 local LocalRepository = {}
+
 LocalRepository.__index = LocalRepository
+
 function LocalRepository.new()
 	local self = {}
 	self.scriptDocuments = {}
@@ -15,6 +17,8 @@ function LocalRepository.new()
 	})
 	return self
 end
+
+
 function LocalRepository:getAllAviableScriptDocuments(name)
 	for _, object in ipairs(game:GetDescendants()) do
 		if object:IsA("Script") or object:IsA("LocalScript") or object:IsA("ModuleScript") then
@@ -28,9 +32,13 @@ function LocalRepository:getAllAviableScriptDocuments(name)
 		end
 	end
 end
+
+
 function LocalRepository:setAttribute(file, path, repositoryName)
 	if not file:GetAttribute("path") then
 		file:SetAttribute("path", path .. repositoryName)
 	end	
 end
+
+
 return LocalRepository
